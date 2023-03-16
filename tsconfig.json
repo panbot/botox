@@ -1,5 +1,6 @@
 {
     "extends": "@tsconfig/node18/tsconfig.json",
+
     "compilerOptions": {
 
         "emitDecoratorMetadata": true,
@@ -9,8 +10,9 @@
         "typeRoots": [
             "node_modules/@types"
         ],
-        "rootDir": "./src",
         "outDir": "dist",
+        "rootDir": "./",
+        "baseUrl": "src/",
     },
     "include": [
         "./src/**/*.ts"
