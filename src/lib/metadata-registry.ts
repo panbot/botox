@@ -1,7 +1,5 @@
 import "reflect-metadata";
 
-type Property = string | symbol;
-
 class Registry<T> {
 
     private reflection: ReturnType<Registry<T>["reflect"]>;
@@ -69,9 +67,11 @@ class Registry<T> {
     }
 }
 
+type Property = string | symbol;
+
 type Anchors<T = unknown> = {
-    'class'    : (target: Object                           ) => Registry<T>
-    'property' : (target: Object, property: string | symbol) => Registry<T>
+    'class'    : (target: Object                    ) => Registry<T>
+    'property' : (target: Object, property: Property) => Registry<T>
 };
 type AnchorType = keyof Anchors;
 

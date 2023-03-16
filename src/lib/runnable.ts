@@ -7,7 +7,7 @@ export interface Runnable<T = unknown> {
 
 export interface RunArgFactory<RunArg = unknown> {
     produceRunArgFor(r: Runnable, ...args: any): Promise<RunArg>;
-    releaseRunArgFor(r: Runnable): Promise<void>;
+    releaseRunArgFor?(r: Runnable): Promise<void>;
     aroundRun?<T>(run: () => Promise<T>, r: Runnable<T>): Promise<T>;
 }
 
@@ -30,9 +30,9 @@ export const RunArg = <T extends RunArgFactory>(
     proto: Runnable<U>,
     method: string,
     index: number,
-) => reg(proto, method)
-    .getOrSet([])
-    .push({ index, Factory, args });
+) => {  reg(proto, method)
+            .getOrSet([])
+            .push({ index, Factory, args }) }
 
 type Arounder = RequiredKey<RunArgFactory, "aroundRun">;
 function factoryIsArounder(factory: RunArgFactory): factory is Arounder {
@@ -57,7 +57,7 @@ export default (
     );
 
     let producing: Promise<any>[] = [];
-    let releasing: (() => Promise<void>)[] = [];
+    let releasing: (() => Promise<void> | void)[] = [];
 
     let arounders: Arounder[] = [];
     let around = (f: () => Promise<T>) => arounders.reduce(
@@ -68,7 +68,8 @@ export default (
     for (let producer of producers) {
         let factory = instantiate(producer.Factory);
         producing.push(produce(producer, factory));
-        releasing.push(() => factory.releaseRunArgFor(runnable));
+
+        releasing.push(() => factory.releaseRunArgFor?.(runnable));
 
         if (factoryIsArounder(factory)) arounders.push(factory);
     }

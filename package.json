@@ -4,6 +4,7 @@
   "description": "BOTaO's typescript backend frameworK Study",
   "main": "index.js",
   "scripts": {
+    "ts-node": "ts-node -r tsconfig-paths/register",
     "build": "npm run clean && tsc -p tsconfig.json",
     "clean": "rimraf dist",
     "test": "echo \"Error: no test specified\" && exit 1"

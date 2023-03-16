@@ -6,12 +6,14 @@
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
 
+        "noImplicitOverride": true,
+
         "sourceMap": false,
         "typeRoots": [
             "node_modules/@types"
         ],
         "outDir": "dist",
-        "rootDir": "./",
+        "rootDir": "src/",
         "baseUrl": "src/",
     },
     "include": [
