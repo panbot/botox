@@ -1,0 +1,23 @@
+# Node
+/node_modules
+npm-debug.log
+
+# Compiled output
+/dist
+/tmp
+/out-tsc
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/*
+
+# System files
+.DS_Store
+Thumbs.db
+
+# app
+/parameters.json
