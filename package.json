@@ -24,6 +24,7 @@
   "license": "ISC",
   "devDependencies": {
     "@tsconfig/node18": "^1.0.1",
+    "@types/node": "^18.15.3",
     "rimraf": "^4.4.0",
     "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.1.2",

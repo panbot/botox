@@ -1,16 +1,15 @@
 import { Constructor } from './types';
 import mr from './metadata-registry';
 
-export default function () {
+export type TokenType<T> = Token<T>;
 
-    type ServiceKey = string | Token<any> | Constructor<any>;
+export default function () {
     let services = new Map<ServiceKey, {
         instance?: any,
-        factory?: (getter: typeof get) => any,
+        factory?: (getter: Getter) => any,
         ctor?: Constructor<any>,
         multiple?: ServiceKey[],
     }>();
-    type Events = 'instantiated';
     let eventHandlers: Record<Events, Function[]> = {
         instantiated: [],
     };
@@ -20,14 +19,15 @@ export default function () {
     function Inject(type: () => any): Function;
     function Inject(token: TokenType<any>): Function;
     function Inject() {
+        const arg = arguments[0];
+
         return (
             target: Object,
             property?: Property,
             index?: number,
         ) => {
-            let injection = createInjection(target, property, index);
+            let injection = route(target, property, index);
 
-            const arg = arguments[0];
             if (typeof arg == 'string') {
                 injection.name = arg;
             } else if (typeof arg == 'function') {
@@ -35,14 +35,14 @@ export default function () {
             } else if (arg instanceof Token) {
                 injection.token = arg;
             } else if (arg != null) {
-                throw { message: `unkonwn argument`, arg }
+                error(`unkonwn argument`, { target, property, index });
             }
         }
     }
 
     function Service(name: string): Function;
     function Service(token: TokenType<any>): Function;
-    function Service(factory: (getter: typeof get) => any): Function;
+    function Service(factory: (getter: Getter) => any): Function;
     function Service() {
         const arg = arguments[0];
 
@@ -72,62 +72,58 @@ export default function () {
     function get<T>(type: Constructor<T>): T;
     function get<T>(token: TokenType<T>): T;
     function get(arg: ServiceKey): any {
-        let v = services.get(arg);
-        if (!v) {
+        let service = services.get(arg);
+        if (!service) {
             if (typeof arg == 'function') { // a construstor
-                return instantiate(arg);
+                let instance = instantiate(arg);
+                services.set(arg, { instance });
+                return instance;
             } else {
-                throw new Error(`service "${arg}" not found`);
+                error(`service "${arg.toString()}" not found`);
             }
         }
 
-        if (v.instance) return v.instance;
+        if (service.instance) return service.instance;
 
-        if (v.factory) {
-            v.instance = v.factory(get);
-        } else if (v.ctor) {
-            v.instance = instantiate(v.ctor);
-        } else if (v.multiple) {
-            v.instance = v.multiple.map(get as (arg: ServiceKey) => any);
+        if (service.factory) {
+            service.instance = service.factory(get as Getter);
+        } else if (service.ctor) {
+            service.instance = instantiate(service.ctor);
+        } else if (service.multiple) {
+            service.instance = service.multiple.map(get as Getter);
         } else {
-            throw new Error(`unable to create service instance due to exhaustion of options`);
+            error(`unable to create service instance for "${arg.toString()}"`);
         }
 
-        return v.instance
+        return service.instance;
     }
 
-    function set(name: string, instance: any): void;
-    function set<T>(type: Constructor<T>, instance: any): void;
-    function set<T>(token: TokenType<T>, instance: T): void;
-    function set(arg: any, instance: any) {
-        services.set(arg, { instance });
-    }
+    const injections = {
+        constructorParameter: new ConstructorParameterInjectionManager(develop),
+        memberProperty:       new MemberPropertyInjectionManager(develop),
+        staticProperty:       new StaticPropertyInjectionManager(develop),
+    } as const;
 
+    // to handle depencency loop
+    let loop = new Map<Constructor<any>, any>()
     function instantiate<T extends Object>(ctor: Constructor<T>) {
-        let instance = new ctor(
-            ...ConstructorParameterInjection.reg(ctor).get()?.reduce(
-                (pv, cv) => ( pv[cv.index] = develop(cv), pv ),
-                [] as any[]
-            ) || []
-        );
+        if (loop.has(ctor)) return loop.get(ctor);
+
+        let instance = injections.constructorParameter.instantiate(ctor);
+        loop.set(ctor, instance);
 
         try {
             for (let handler of eventHandlers.instantiated) {
                 instance = handler(instance);
             }
 
-            // to prevent infinite loop
-            services.set(ctor, { instance });
-
-            for (let [ property, injection ] of MemberPropertyInjection.getPropertyInjections(ctor.prototype)) {
-                // @TODO:                                                                     ^ why not instance
-                Reflect.defineProperty(instance, property, { value: develop(injection) });
-            }
+            injections.memberProperty.inject(instance);
 
             return instance;
         } catch (e) {
-            services.delete(ctor);
-            throw e;
+            throw excavateUnknownError(e);
+        } finally {
+            loop.delete(ctor);
         }
     }
 
@@ -142,109 +138,19 @@ export default function () {
         }
     }
 
-    class Injection {
-        factory?: (getter: typeof get) => any;
-        name?: string;
-        type?: () => any;
-        token?: Token<any>;
-        ctor?: Constructor<any>;
-
-        constructor() {
-            this.init();
-        }
-
-        protected init() {}
-    }
-
-    class ConstructorParameterInjection extends Injection {
-
-        constructor(
-            public target: Object,
-            public index: number,
-        ) {
-            super();
-        }
-
-        override init() {
-            this.ctor = Reflect.getMetadata('design:paramtypes', this.target)[this.index];
-            ConstructorParameterInjection.reg(this.target).getOrSet([]).push(this);
-        }
-
-        static reg = mr<ConstructorParameterInjection[]>().on('class');
-    }
-
-    abstract class PropertyInjection extends Injection {
-
-        constructor(
-            public target: Object,
-            public property: Property
-        ) {
-            super();
-        }
-
-        override init() {
-            this.ctor = Reflect.getMetadata('design:type', this.target, this.property);
-        }
-    }
-
-    class StaticPropertyInjection extends PropertyInjection {
-        override init() {
-            super.init();
-
-            let reg = StaticPropertyInjection.values(this.target, this.property);
-            Object.defineProperty(this.target, this.property, {
-                get() {
-                    let value = reg.get();
-                    if (!value) {
-                        value = develop(this);
-                        reg.set(value);
-                    }
-                    return value;
-                },
-                set(v) {
-                    return this.value = v;
-                },
-            })
-        }
-
-        static values = mr<any>().on('property');
-    }
-
-    class MemberPropertyInjection extends PropertyInjection {
-        override init() {
-            super.init();
-
-            const self = MemberPropertyInjection;
-            self.names(this.target).getOrSet([]).push(this.property);
-            self.reg(this.target, this.property).set(this);
-        }
-
-        static names = mr<Property[]>().on('class');
-        static reg = mr<MemberPropertyInjection>().on('property');
-
-        static getPropertyInjections(target: Object) {
-            const self = MemberPropertyInjection;
-            let ret = new Map<Property, Injection>();
-
-            const properties = self.names(target).trace().flat();
-            for (let property of properties) {
-                const injection = self.reg(target, property).get();
-                if (!injection) throw new Error(`no injections found for ${target}::${property.toString()}`);
-                ret.set(property, injection);
-            }
-
-            return ret;
-        }
-    }
+    function set<T>(name: string, instance: T): void;
+    function set<T>(type: Constructor<T>, instance: T): void;
+    function set<T>(token: TokenType<T>, instance: T): void;
+    function set(k: any, instance: any) { services.set(k, { instance }) }
 
     return {
+        token: <T>(name: string, multiple: boolean = false): TokenType<T> => new Token<T>(name, multiple),
         Inject,
         Service,
-
         get,
         set,
-
         instantiate,
+        on,
 
         createInject: (
             factory: (getter: typeof get) => any,
@@ -253,17 +159,38 @@ export default function () {
             property: Property,
             index?: number,
         ) => {
-            createInjection(target, property, index).factory = factory;
+            route(target, property, index).factory = factory;
         },
+    }
 
-        token: <T>(name: string, multiple: boolean = false): TokenType<T> => new Token<T>(name, multiple),
-
-        on,
+    function route(
+        target: Object,
+        property?: Property,
+        index?: number,
+    ) {
+        if (
+            typeof target == 'function' &&
+            property === undefined &&
+            index !== undefined
+        ) {
+            return injections.constructorParameter.create(target, index);
+        } else if (
+            property !== undefined &&
+            index === undefined
+        ) {
+            if (typeof target == 'function') {
+                return injections.staticProperty.create(target, property);
+            } else {
+                return injections.memberProperty.create(target, property);
+            }
+        } else {
+            error('unsupported decorator parameters', { target, property, index });
+        }
     }
 
     function develop(injection: Injection): any {
         if (injection.factory) {
-            return injection.factory(get);
+            return injection.factory(get as Getter);
         } else if (injection.name) {
             return get(injection.name)
         } else if (injection.token) {
@@ -271,77 +198,182 @@ export default function () {
         } else if (injection.type) {
             return get(injection.type());
         } else if (injection.ctor) {
+            switch (injection.ctor) {
+                case Number: case String: case Boolean: case Date: case Function: case Object:
+                error(`injection signature required for generic type "${injection.ctor.name}"`, injection.point);
+            }
             return get(injection.ctor);
         } else {
-            throw new Error([
-                `cannot develop injection,`,
-                `${JSON.stringify(injection, null, 4)},`,
-                `insufficient information`,
-            ].join(' '));
+            error('unable to develop injection', injection.point);
         }
     }
-
-    function createInjection(
-        target: Object,
-        property?: Property,
-        index?: number,
-    ) {
-        let injection: Injection = route();
-
-        switch (injection.ctor) {
-            case Object:
-            case Number:
-            case String:
-            case Boolean:
-                injection.ctor = undefined;
-                if (!(injection.factory || injection.name || injection.token || injection.type)) {
-                    throw new TypeError([
-                        `injection signature required for generic types`,
-                        `target=${target}`,
-                        `property=${property?.toString()}`,
-                        `constructor=${injection.ctor}`
-                     ].join(', '))
-                }
-        }
-
-        return injection;
-
-        function route() {
-            if (
-                typeof target == 'function' &&
-                property === undefined &&
-                index !== undefined
-            ) {
-                return new ConstructorParameterInjection(target, index);
-            } else if (
-                property !== undefined &&
-                index === undefined
-            ) {
-                if (typeof target == 'function') {
-                    return new StaticPropertyInjection(target, property);
-                } else {
-                    return new MemberPropertyInjection(target, property);
-                }
-            } else {
-                throw new Error(`unsupported decorator parameters`);
-            }
-        }
-    }
-
 }
 
 class Token<T> {
     constructor(
         public name: string,
         public multiple: boolean,
-    ) {
-
-    }
+    ) { }
 
     toString() {
         return this.name;
     }
 }
-export type TokenType<T> = Token<T>;
 
-type Property = string | symbol;
+type Property   = string | symbol;
+type ServiceKey = string | Token<any> | Constructor<any>;
+type Getter     = (v: ServiceKey) => any;
+type Developer  = (v: Injection) => any;
+type Events     = 'instantiated';
+
+type Point = {
+    target: Object,
+    property?: Property,
+    index?: number,
+}
+interface Injection<P extends Point = Point> {
+    point: P,
+
+    factory?: (getter: Getter) => any;
+    name?: string;
+    type?: () => any;
+    token?: Token<any>;
+    ctor?: Constructor<any>;
+}
+
+type ConstructorParameterInjection = Injection<{
+    target: Object,
+    index: number,
+}>;
+class ConstructorParameterInjectionManager {
+
+    private getRegistry = mr<ConstructorParameterInjection[]>().on('class');
+
+    constructor(
+        public develop: Developer,
+    ) { }
+
+    create(target: Object, index: number) {
+        let injection: ConstructorParameterInjection = {
+            point: { target, index },
+            ctor: Reflect.getMetadata('design:paramtypes', target)[index],
+        }
+
+        this.getRegistry(target).getOrSet([]).push(injection);
+
+        return injection;
+    }
+
+    instantiate<T>(ctor: Constructor<T>) {
+        return new ctor(
+            ...this.getRegistry(ctor).get()?.reduce(
+                (pv, cv) => ( pv[cv.point.index] = this.develop(cv), pv ),
+                [] as any[]
+            ) || []
+        );
+    }
+}
+
+type PropertyInjection = Injection<{
+    target: Object,
+    property: Property,
+}>;
+
+class StaticPropertyInjectionManager {
+
+    private getRegistry = mr<{ value: any }>().on('property');
+
+    constructor(
+        public develop: Developer,
+    ) { }
+
+    create(target: Object, property: Property) {
+        let injection: PropertyInjection = {
+            point: { target, property },
+            ctor: Reflect.getMetadata('design:type', target, property),
+        }
+
+        // inject on create
+        let registry = this.getRegistry(target, property);
+        Object.defineProperty(target, property, {
+            get: () => registry.getOrSet({ value: this.develop(injection) }).value,
+            set: value => registry.set({ value }),
+        });
+
+        return injection;
+    }
+}
+
+class MemberPropertyInjectionManager {
+    private getRegistry = mr<PropertyInjection>().on('property');
+    private getPropertyRegistry = mr<Property[]>().on('class');
+
+    constructor(
+        public develop: Developer,
+    ) { }
+
+    create(target: Object, property: Property) {
+        let injection: PropertyInjection = {
+            point: { target, property },
+            ctor: Reflect.getMetadata('design:type', target, property),
+        }
+
+        this.getRegistry(target, property).set(injection);
+        this.getPropertyRegistry(target).getOrSet([]).push(property);
+
+        return injection;
+    }
+
+    inject(instance: Object) {
+        let injections = new Map<Property, Injection>();
+        const properties = this.getPropertyRegistry(instance).trace().flat();
+        for (let property of properties) {
+            const injection = this.getRegistry(instance, property).get();
+            if (!injection) error('no injections found', { target: instance, property });
+
+            // this overrides parent injections if exists
+            injections.set(property, injection);
+        }
+
+        injections.forEach(
+            (injection, property) =>
+                Reflect.defineProperty(
+                    instance,
+                    property,
+                    { value: this.develop(injection) }
+                )
+        );
+    }
+}
+
+function error(message: string, point?: {
+    target: Object,
+    property?: Property,
+    index?: number,
+}): never {
+    let location = '';
+    if (point) {
+        location = ' @ ';
+        let { target, property, index } = point;
+
+        location += typeof target == 'function' ? target.name
+                                                : target.constructor.name;
+        if (property) location += '::' + property.toString();
+        else if (index != null) location += `::constructor(#${index})`;
+    }
+
+    throw new Error(message + location);
+}
+
+function excavateUnknownError(unknownError: any) {
+    if (unknownError instanceof Error) throw unknownError;
+
+    return new Error(
+        asString(unknownError) ||
+        asString(unknownError?.message) ||
+        'unknown error');
+
+    function asString(v: unknown) {
+        if (typeof v == 'string') return v;
+    }
+}

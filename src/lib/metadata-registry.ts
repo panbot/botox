@@ -17,7 +17,8 @@ class Registry<T> {
     }
 
     set(metadata: T) {
-        this.reflection.defineMetadata(metadata)
+        this.reflection.defineMetadata(metadata);
+        return metadata;
     }
 
     getOrSet(metadata: T) {
