@@ -25,7 +25,7 @@ export function AopFactory(
         prototype  : Object,
         method     : PropertyKey,
         descriptor : PropertyDescriptor,
-    }) => void,
+    }) => any,
 ) {
     const create: (
         pattern: (p: Pointcut, invoke: (p: Pointcut) => any) => any
