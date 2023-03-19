@@ -28,7 +28,7 @@ export function AopFactory(
     }) => any,
 ) {
     const create: (
-        pattern: (p: Pointcut, invoke: (p: Pointcut) => any) => any
+        shape: (p: Pointcut, invoke: (p: Pointcut) => any) => any
     ) => MethodDecorator = (
         pattern,
     ) => (
