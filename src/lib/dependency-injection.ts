@@ -1,8 +1,6 @@
 import { Constructor } from './types';
 import mr from './metadata-registry';
 
-export type TokenType<T> = Token<T>;
-
 export default function () {
     let services = new Map<ServiceKey, {
         instance?: any,
@@ -105,8 +103,8 @@ export default function () {
     } as const;
 
     // to handle depencency loop
-    let loop = new Map<Constructor<any>, any>()
-    function instantiate<T extends Object>(ctor: Constructor<T>) {
+    let loop = new Map<Constructor<any>, any>();
+    function instantiate<T extends Object>(ctor: Constructor<T>): T {
         if (loop.has(ctor)) return loop.get(ctor);
 
         let instance = injections.constructorParameter.instantiate(ctor);
@@ -143,8 +141,15 @@ export default function () {
     function set<T>(token: TokenType<T>, instance: T): void;
     function set(k: any, instance: any) { services.set(k, { instance }) }
 
+    function token<T>(
+        name: string,
+        multiple = false,
+    ) {
+        return new Token<T>(name, multiple);
+    }
+
     return {
-        token: <T>(name: string, multiple: boolean = false): TokenType<T> => new Token<T>(name, multiple),
+        token,
         Inject,
         Service,
         get,
@@ -214,14 +219,12 @@ class Token<T> {
         public name: string,
         public multiple: boolean,
     ) { }
-
-    toString() {
-        return this.name;
-    }
 }
 
+export type TokenType<T = any> = Token<T>;
+
 type Property   = string | symbol;
-type ServiceKey = string | Token<any> | Constructor<any>;
+type ServiceKey = string | TokenType | Constructor<any>;
 type Getter     = (v: ServiceKey) => any;
 type Developer  = (v: Injection) => any;
 type Events     = 'instantiated';
@@ -237,7 +240,7 @@ interface Injection<P extends Point = Point> {
     factory?: (getter: Getter) => any;
     name?: string;
     type?: () => any;
-    token?: Token<any>;
+    token?: TokenType;
     ctor?: Constructor<any>;
 }
 
@@ -335,14 +338,7 @@ class MemberPropertyInjectionManager {
             injections.set(property, injection);
         }
 
-        injections.forEach(
-            (injection, property) =>
-                Reflect.defineProperty(
-                    instance,
-                    property,
-                    { value: this.develop(injection) }
-                )
-        );
+        injections.forEach((i, p) => Reflect.defineProperty(instance, p, { value: this.develop(i) }));
     }
 }
 

@@ -1,5 +1,25 @@
 import "reflect-metadata";
 
+export default function<T>(
+    key: any = Symbol(),
+) {
+    const Anchors = {
+
+        'class': (
+            target: Object,
+        ) => new Registry<T>(key, target),
+
+        'property': (
+            target: Object,
+            property: PropertyKey,
+        ) => new Registry<T>(key, target, property),
+    };
+
+    return {
+        on: <U extends keyof typeof Anchors>(anchor: U) => Anchors[anchor],
+    }
+}
+
 class Registry<T> {
 
     private reflection: ReturnType<Registry<T>["reflect"]>;
@@ -7,22 +27,22 @@ class Registry<T> {
     constructor(
         public key: string,
         public target: any,
-        public property?: Property,
+        public property?: PropertyKey,
     ) {
         this.reflection = this.reflect(target, property);
     }
 
     get() {
-        return this.reflection.getMetadata()
+        return this.reflection.get()
     }
 
     set(metadata: T) {
-        this.reflection.defineMetadata(metadata);
+        this.reflection.define(metadata);
         return metadata;
     }
 
     getOrSet(metadata: T) {
-        let current = this.get();
+        let current = this.getOwn();
         if (current != null) return current;
 
         this.set(metadata);
@@ -30,57 +50,25 @@ class Registry<T> {
     }
 
     getOwn() {
-        return this.reflection.getOwnMetadata()
+        return this.reflection.getOwn()
     }
 
     trace(): T[] {
-        let ret: (T | undefined)[] = [ this.reflection.getOwnMetadata() ];
+        let ret: (T | undefined)[] = [ this.reflection.getOwn() ];
         for (
             let parent = Reflect.getPrototypeOf(this.target);
             parent;
             parent = Reflect.getPrototypeOf(parent)
-        ) ret.push(this.reflect(parent, this.property).getOwnMetadata());
+        ) ret.push(this.reflect(parent, this.property).getOwn());
 
         return ret.filter((v: any): v is T => v != null);
     }
 
-    private reflect(
-        target: Object,
-        property?: Property,
-    ): {
-        getMetadata:    () => T | undefined,
-        getOwnMetadata: () => T | undefined,
-        defineMetadata: (metadata: T) => void,
-    } {
-        if (property) {
-            return {
-                getMetadata:    () => Reflect.getMetadata(this.key, target, property),
-                getOwnMetadata: () => Reflect.getOwnMetadata(this.key, target, property),
-                defineMetadata: metadata => Reflect.defineMetadata(this.key, metadata, target, property),
-            }
-        } else {
-            return {
-                getMetadata:    () => Reflect.getMetadata(this.key, target),
-                getOwnMetadata: () => Reflect.getOwnMetadata(this.key, target),
-                defineMetadata: metadata => Reflect.defineMetadata(this.key, metadata, target),
-            }
+    private reflect(t: Object, p?: PropertyKey) {
+        return {
+            get    :     () => Reflect.getMetadata   (this.key,    t, p as any) as T,
+            getOwn :     () => Reflect.getOwnMetadata(this.key,    t, p as any) as T,
+            define : (v: T) => Reflect.defineMetadata(this.key, v, t, p as any),
         }
     }
 }
-
-type Property = string | symbol;
-
-type Anchors<T = unknown> = {
-    'class'    : (target: Object                    ) => Registry<T>
-    'property' : (target: Object, property: Property) => Registry<T>
-};
-type AnchorType = keyof Anchors;
-
-export default <T>(
-    key: any = Symbol(),
-) => ({
-    on: <U extends AnchorType>(anchor: U) => ({
-        'class'    : (t)    => new Registry(key, t),
-        'property' : (t, p) => new Registry(key, t, p),
-    } as Anchors<T>)[anchor],
-})
