@@ -13,18 +13,18 @@ export class ClassAsApiManager<Api, Options extends ApiOptions> {
 
     createDecorator() {
         return decorator<Constructor<Api>>()('class')(
-            target => this.createOptions(target),
-            target => this.getOptions(target)
+            target => this.makeOptions(target),
+            target => this.findOptions(target)
         )
     }
 
-    createOptions(target: Constructor<Api>) {
+    makeOptions(target: Constructor<Api>) {
         let options = this.createCustomOptions(target);
         this.members.set(target, options);
         return options;
     }
 
-    getOptions(target: Constructor<Api>) {
+    findOptions(target: Constructor<Api>) {
         let options = this.members.get(target);
         assert(options, `Api options for ${target.name} not found`);
         return options;

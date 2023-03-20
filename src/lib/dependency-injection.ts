@@ -104,10 +104,13 @@ export default function () {
 
     // to handle depencency loop
     let loop = new Map<Constructor<any>, any>();
-    function instantiate<T>(ctor: Constructor<T>): T {
+    function instantiate<T>(
+        ctor: Constructor<T>,
+        args?: ConstructorParameters<Constructor<T>>,
+    ): T {
         if (loop.has(ctor)) return loop.get(ctor);
 
-        let instance = injections.constructorParameter.instantiate(ctor);
+        let instance = injections.constructorParameter.instantiate(ctor, args);
         loop.set(ctor, instance);
 
         try {
@@ -267,11 +270,11 @@ class ConstructorParameterInjectionManager {
         return injection;
     }
 
-    instantiate(ctor: Constructor<any>) {
+    instantiate(ctor: Constructor<any>, args: any[] = []) {
         return new ctor(
             ...this.getRegistry(ctor).get()?.reduce(
                 (pv, cv) => ( pv[cv.point.index] = this.develop(cv), pv ),
-                [] as any[]
+                args
             ) || []
         );
     }

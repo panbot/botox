@@ -14,11 +14,11 @@ const manager = new ClassAsApiManager<Runnable, ApiOptions>(
 const Api = manager.createDecorator();
 
 @Api()
-class MyApi implements Runnable{
+class MyApi implements Runnable {
 
     async run() {
 
     }
 }
 
-console.log(manager.getOptions(MyApi));
+console.log(manager.findOptions(MyApi));

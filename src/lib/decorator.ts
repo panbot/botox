@@ -1,6 +1,6 @@
 import { Constructor } from "./types";
 
-export default function<TargetType extends Constructor<any>>() {
+export default function<TargetType>() {
 
     const DecorationTypes = {
         class     : create< TargetType,     ClassDecorator >(),
