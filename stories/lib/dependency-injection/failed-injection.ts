@@ -1,4 +1,4 @@
-import di from 'lib/dependency-injection';
+import di from '@/lib/dependency-injection';
 
 const Container = di();
 

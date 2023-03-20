@@ -1,4 +1,4 @@
-import factory, { RunArg, RunArgFactory, Runnable } from "lib/runnable";
+import factory, { RunArg, RunArgFactory, Runnable } from "@/lib/runnable";
 
 async function testRun() {
     let run = factory(c => new c());

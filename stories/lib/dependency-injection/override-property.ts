@@ -1,5 +1,5 @@
-import di from 'lib/dependency-injection';
-import { Constructor } from 'lib/types';
+import di from '@/lib/dependency-injection';
+import { Constructor } from '@/lib/types';
 
 const Container = di();
 

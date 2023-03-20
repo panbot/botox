@@ -1,4 +1,4 @@
-import { DestructiveAop } from 'lib/aop';
+import { DestructiveAop } from '@/lib/aop';
 
 const { Before, After } = DestructiveAop();
 
