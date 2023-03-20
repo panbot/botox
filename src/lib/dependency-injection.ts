@@ -98,13 +98,13 @@ export default function () {
 
     const injections = {
         constructorParameter: new ConstructorParameterInjectionManager(develop),
-        memberProperty:       new MemberPropertyInjectionManager(develop),
-        staticProperty:       new StaticPropertyInjectionManager(develop),
+        memberProperty:       new       MemberPropertyInjectionManager(develop),
+        staticProperty:       new       StaticPropertyInjectionManager(develop),
     } as const;
 
     // to handle depencency loop
     let loop = new Map<Constructor<any>, any>();
-    function instantiate<T extends Object>(ctor: Constructor<T>): T {
+    function instantiate<T>(ctor: Constructor<T>): T {
         if (loop.has(ctor)) return loop.get(ctor);
 
         let instance = injections.constructorParameter.instantiate(ctor);
@@ -267,7 +267,7 @@ class ConstructorParameterInjectionManager {
         return injection;
     }
 
-    instantiate<T>(ctor: Constructor<T>) {
+    instantiate(ctor: Constructor<any>) {
         return new ctor(
             ...this.getRegistry(ctor).get()?.reduce(
                 (pv, cv) => ( pv[cv.point.index] = this.develop(cv), pv ),

@@ -25,7 +25,7 @@ export function AopFactory(
         prototype  : Object,
         method     : PropertyKey,
         descriptor : PropertyDescriptor,
-    }) => any,
+    }) => void,
 ) {
     const create: (
         shape: (p: Pointcut, invoke: (p: Pointcut) => any) => any
@@ -80,9 +80,7 @@ export const ProxitiveAop = (
         }
 
         for (let [ k, v ] of pointcuts.entries()) {
-            Object.defineProperty(proxy, k, {
-                value: v.reduce((pv, cv) => apply(cv, pv), target[k] as Function)
-            })
+            proxy[k] = v.reduce((pv, cv) => apply(cv, pv), target[k] as Function);
         }
 
         return proxy;
