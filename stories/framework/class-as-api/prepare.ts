@@ -1,4 +1,4 @@
-import fatory from '@/framework/api'
+import factory from '@/framework/api'
 
 export class ApiOptions {
     constructor(
@@ -6,4 +6,4 @@ export class ApiOptions {
     ) { }
 }
 
-export const Api = fatory<{}>().classAsApi(ctor => new ApiOptions(ctor.name));
+export const Api = factory<{}>().classAsApi(ctor => new ApiOptions(ctor.name));

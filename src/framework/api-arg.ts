@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import decorator from "../lib/decorator";
 import { Constructor } from "../lib/types";
+import { ValidatableOptions } from "./validatable";
 
 export type ApiArgOptions = {
     doc: string,
@@ -8,8 +9,7 @@ export type ApiArgOptions = {
     optional: boolean,
     default: any,
     priority: number,
-    parser: (v: unknown) => any,
-    validator: (v: any) => string | undefined | void,
+    validatable: ValidatableOptions,
 }
 
 export default function<Api extends {}>() {
