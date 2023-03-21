@@ -3,57 +3,35 @@ import decorator from "../lib/decorator";
 import { Runnable } from "../lib/runnable";
 import { Constructor, Instantiator } from "../lib/types";
 
-type Module = { init?: () => any }
-type ModuleConstructor = Constructor<Module>;
-
-export type ModuleOptions = {
+export type ModuleOptions<Module extends {}> = {
     name: string,
     controllers?: Constructor<any>[],
     apis?: Runnable<any>,
-    dependencies?: () => ModuleConstructor[],
+    dependencies?: () => Constructor<Module>[],
 }
 
-export class ModuleManager {
+export class ModuleManager<Module extends {}> {
 
-    members = new Map<ModuleConstructor, ModuleOptions>();
-    #inited = new Set<ModuleConstructor>();
+    readonly decorator = decorator('class')<Module>()(target => this.createOptions(target));
 
-    createDecorator() {
-        return decorator<ModuleConstructor>()('class')(
-            target => this.createOptions(target),
-            target => this.   getOptions(target)
-        )
-    }
-
-    createOptions(target: ModuleConstructor): ModuleOptions {
-        let options: ModuleOptions = { name: target.name };
-        this.members.set(target, options);
+    createOptions(target: Constructor<Module>) {
+        let options: ModuleOptions<Module> = { name: target.name };
         return options;
     }
 
-    getOptions(target: ModuleConstructor) {
-        let options = this.members.get(target);
+    getOptions(target: Constructor<Module>) {
+        let options = this.decorator.getRegistry(target).getOwn();
         assert(options, `Module options for ${target.name} not found`);
         return options;
     }
 
-    async init(instantiate: Instantiator) {
-        for (let module of this.resolveDependencies()) {
-            if (this.#inited.has(module)) continue;
-
-            let instance = instantiate(module);
-
-            await instance.init?.();
-            this.#inited.add(module);
-        }
-    }
-
-    resolveDependencies() {
-        let visited = new Set<ModuleConstructor>();
+    resolveDependencies(
+        modules: Constructor<Module>[]
+    ) {
+        let visited = new Set<Constructor<Module>>();
         const visit = (
-            options: ModuleOptions,
-            module: ModuleConstructor,
-            path = new Set<ModuleConstructor>()
+            module: Constructor<Module>,
+            path = new Set<Constructor<Module>>()
         ) => {
             if (visited.has(module)) return;
 
@@ -62,17 +40,17 @@ export class ModuleManager {
             );
             path.add(module);
 
-            options.dependencies?.().forEach(
-                d => visit(this.getOptions(d), d, new Set<ModuleConstructor>(path))
+            this.getOptions(module).dependencies?.().forEach(
+                d => visit(d, new Set<Constructor<Module>>(path))
             );
 
             sorted.push(module);
             visited.add(module);
         }
 
-        let sorted: ModuleConstructor[] = [];
+        let sorted: Constructor<Module>[] = [];
 
-        this.members.forEach((o, m) => visit(o, m));
+        modules.forEach(m => visit(m));
 
         return sorted;
     }

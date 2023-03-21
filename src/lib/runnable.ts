@@ -21,69 +21,76 @@ type RunArgMetadata<T extends RunArgFactory = RunArgFactory> = {
     args: RunArgProducerArgs<T>,
 };
 
-const reg = mr<RunArgMetadata[]>().on('property');
-
-export const RunArg = <T extends RunArgFactory>(
-    Factory: Constructor<T>,
-    ...args: RunArgProducerArgs<T>
-) => <U>(
-    proto: Runnable<U>,
-    method: string,
-    index: number,
-) => {  reg(proto, method)
-            .getOrSet([])
-            .push({ index, Factory, args }) }
-
 type Arounder = RequiredKey<RunArgFactory, "aroundRun">;
 function factoryIsArounder(factory: RunArgFactory): factory is Arounder {
     return factory.aroundRun != null;
 }
 
-export default (
+export default function (
     instantiate: Instantiator,
-) => async <T>(
-    runnable: Runnable<T>,
-) => {
-    let producers = reg(runnable, 'run').get();
-    if (!producers?.length) return await runnable.run();
+) {
+    const reg = mr<RunArgMetadata[]>()('property');
 
-    let args: any[] = [];
-    let produce = async <U, T extends RunArgFactory<U>>(
-        producer: RunArgMetadata<T>,
-        factory: T
-    ) => args[producer.index] = await factory.produceRunArgFor(
-        runnable,
-        ...producer.args
-    );
+    const RunArg = <T extends RunArgFactory>(
+        Factory: Constructor<T>,
+        ...args: RunArgProducerArgs<T>
+    ) => <U>(
+        proto: Runnable<U>,
+        method: string,
+        index: number,
+    ) => {  reg(proto, method)
+                .getOrSet([])
+                .push({ index, Factory, args }) }
 
-    let producing: Promise<any>[] = [];
-    let releasing: (() => Promise<void> | void)[] = [];
+    async function run<T>(
+        runnable: Runnable<T>,
+    ) {
+        let producers = reg(runnable, 'run').get();
+        if (!producers?.length) return await runnable.run();
 
-    let arounders: Arounder[] = [];
-    let around = (f: () => Promise<T>) => arounders.reduce(
-        (pv, cv) => () => cv.aroundRun(pv, runnable),
-        f,
-    )
+        let args: any[] = [];
+        let produce = async <U, T extends RunArgFactory<U>>(
+            producer: RunArgMetadata<T>,
+            factory: T
+        ) => args[producer.index] = await factory.produceRunArgFor(
+            runnable,
+            ...producer.args
+        );
 
-    for (let producer of producers) {
-        let factory = instantiate(producer.Factory);
-        producing.push(produce(producer, factory));
+        let producing: Promise<any>[] = [];
+        let releasing: (() => Promise<void> | void)[] = [];
 
-        releasing.push(() => factory.releaseRunArgFor?.(runnable));
+        let arounders: Arounder[] = [];
+        let around = (f: () => Promise<T>) => arounders.reduce(
+            (pv, cv) => () => cv.aroundRun(pv, runnable),
+            f,
+        )
 
-        if (factoryIsArounder(factory)) arounders.push(factory);
+        for (let producer of producers) {
+            let factory = instantiate(producer.Factory);
+            producing.push(produce(producer, factory));
+
+            releasing.push(() => factory.releaseRunArgFor?.(runnable));
+
+            if (factoryIsArounder(factory)) arounders.push(factory);
+        }
+
+        try {
+            await Promise.all(producing);
+            let execute = () => runnable.run(...args);
+
+            if (!arounders.length) return await execute();
+
+            return await around(execute)();
+        } catch (e) {
+            throw e;
+        } finally {
+            await Promise.all(releasing.map(r => r()));
+        }
     }
 
-    try {
-        await Promise.all(producing);
-        let execute = () => runnable.run(...args);
-
-        if (!arounders.length) return await execute();
-
-        return await around(execute)();
-    } catch (e) {
-        throw e;
-    } finally {
-        await Promise.all(releasing.map(r => r()));
+    return {
+        run,
+        RunArg,
     }
 }

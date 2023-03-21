@@ -1,7 +1,11 @@
-import factory, { RunArg, RunArgFactory, Runnable } from "@/lib/runnable";
+import factory, { RunArgFactory, Runnable } from "@/lib/runnable";
 
 async function testRun() {
-    let run = factory(c => new c());
+
+    const {
+        run,
+        RunArg,
+    } = factory(c => new c);
 
     class RunArgFactory1 implements RunArgFactory {
         async produceRunArgFor(r: Runnable, arg1: string, arg2: number) {

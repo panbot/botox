@@ -21,7 +21,7 @@ export default function () {
 
         return (
             target: Object,
-            property?: Property,
+            property?: PropertyKey,
             index?: number,
         ) => {
             let injection = route(target, property, index);
@@ -164,7 +164,7 @@ export default function () {
             factory: (getter: typeof get) => any,
         ) => (
             target: Object,
-            property: Property,
+            property: PropertyKey,
             index?: number,
         ) => {
             route(target, property, index).factory = factory;
@@ -173,7 +173,7 @@ export default function () {
 
     function route(
         target: Object,
-        property?: Property,
+        property?: PropertyKey,
         index?: number,
     ) {
         if (
@@ -226,7 +226,6 @@ class Token<T> {
 
 export type TokenType<T = any> = Token<T>;
 
-type Property   = string | symbol;
 type ServiceKey = string | TokenType | Constructor<any>;
 type Getter     = (v: ServiceKey) => any;
 type Developer  = (v: Injection) => any;
@@ -234,7 +233,7 @@ type Events     = 'instantiated';
 
 type Point = {
     target: Object,
-    property?: Property,
+    property?: PropertyKey,
     index?: number,
 }
 interface Injection<P extends Point = Point> {
@@ -253,7 +252,7 @@ type ConstructorParameterInjection = Injection<{
 }>;
 class ConstructorParameterInjectionManager {
 
-    private getRegistry = mr<ConstructorParameterInjection[]>().on('class');
+    private getRegistry = mr<ConstructorParameterInjection[]>()('class');
 
     constructor(
         public develop: Developer,
@@ -282,21 +281,21 @@ class ConstructorParameterInjectionManager {
 
 type PropertyInjection = Injection<{
     target: Object,
-    property: Property,
+    property: PropertyKey,
 }>;
 
 class StaticPropertyInjectionManager {
 
-    private getRegistry = mr<{ value: any }>().on('property');
+    private getRegistry = mr<{ value: any }>()('property');
 
     constructor(
         public develop: Developer,
     ) { }
 
-    create(target: Object, property: Property) {
+    create(target: Object, property: PropertyKey) {
         let injection: PropertyInjection = {
             point: { target, property },
-            ctor: Reflect.getMetadata('design:type', target, property),
+            ctor: Reflect.getMetadata('design:type', target, property as any),
         }
 
         // inject on create
@@ -311,29 +310,27 @@ class StaticPropertyInjectionManager {
 }
 
 class MemberPropertyInjectionManager {
-    private getRegistry = mr<PropertyInjection>().on('property');
-    private getPropertyRegistry = mr<Property[]>().on('class');
+    private getRegistry = mr<PropertyInjection>()('property');
 
     constructor(
         public develop: Developer,
     ) { }
 
-    create(target: Object, property: Property) {
+    create(target: Object, property: PropertyKey) {
         let injection: PropertyInjection = {
             point: { target, property },
-            ctor: Reflect.getMetadata('design:type', target, property),
+            ctor: Reflect.getMetadata('design:type', target, property as any),
         }
 
         this.getRegistry(target, property).set(injection);
-        this.getPropertyRegistry(target).getOrSet([]).push(property);
 
         return injection;
     }
 
     inject(instance: Object) {
-        let injections = new Map<Property, Injection>();
-        const properties = this.getPropertyRegistry(instance).trace().flat();
-        for (let property of properties) {
+        let injections = new Map<PropertyKey, Injection>();
+        const properties = this.getRegistry(instance, '').properties.trace().flat();
+        for (let property of new Set(properties)) {
             const injection = this.getRegistry(instance, property).get();
             if (!injection) error('no injections found', { target: instance, property });
 
@@ -347,7 +344,7 @@ class MemberPropertyInjectionManager {
 
 function error(message: string, point?: {
     target: Object,
-    property?: Property,
+    property?: PropertyKey,
     index?: number,
 }): never {
     let location = '';

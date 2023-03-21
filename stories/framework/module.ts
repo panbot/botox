@@ -1,7 +1,7 @@
 import { ModuleManager } from '@/framework/module';
 
 let manager = new ModuleManager();
-const Module = manager.createDecorator();
+const Module = manager.decorator;
 
 @Module({
     name: 'my module',

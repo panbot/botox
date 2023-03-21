@@ -53,21 +53,21 @@ export const InjectiveAopFactory = (
 ) => AopFactory(({
     origin, advised, prototype, method,
 }) => {
-    let registry = mr<Advised[]>(InjectiveAopFactory).on('property')(prototype, method);
+    let registry = mr<Advised[]>(InjectiveAopFactory)('property')(prototype, method);
     registry.getOrSet([]).push(advised);
 
     inject(
         prototype,
         method,
-        () => registry.getOwn().reduce((pv, cv) => apply(cv, pv), origin),
+        () => registry.getOwn()!.reduce((pv, cv) => apply(cv, pv), origin),
     );
 });
 
 export const ProxitiveAop = (
     use: (proxifier: (object: any) => any) => any,
 ) => {
-    let p = mr<PropertyKey[]>().on('class'   );
-    let a = mr<    Advised[]>().on('property');
+    let p = mr<PropertyKey[]>()('class'   );
+    let a = mr<    Advised[]>()('property');
 
     use((target: any) => {
         let properties = p(target).trace().flat();
@@ -76,7 +76,7 @@ export const ProxitiveAop = (
         let proxy = Object.create(target);
         let pointcuts = new Map<PropertyKey, Advised[]>();
         for (let property of new Set(properties)) {
-            pointcuts.set(property, a(target, property).getOwn());
+            pointcuts.set(property, a(target, property).getOwn()!);
         }
 
         for (let [ k, v ] of pointcuts.entries()) {
