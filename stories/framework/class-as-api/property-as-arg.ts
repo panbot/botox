@@ -5,6 +5,11 @@ const Arg = factory<{}>().propertyAsArg()
 class MyApi {
 
     @Arg()
+        .doc('some arg')
+        .default('abcd')
+        .optional(true)
+        .priority(100)
+        .validator((v: string) => v.length < 100 ? undefined : 'too long')
     arg1!: string;
 }
 
