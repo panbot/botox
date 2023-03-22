@@ -1,0 +1,46 @@
+import decorator from "@/lib/decorator";
+import expandify from "@/lib/expandify";
+import { Constructor } from "@/lib/types";
+
+
+type Position = {
+    target: Object,
+    index: number,
+    ctor: any,
+};
+const Param = expandify(decorator('parameter')<{}>()(
+    (target, property, index) => ({
+        target,
+        index,
+        ctor: Reflect.getMetadata('design:paramtypes', target, property)[index],
+    } as Position)
+))[expandify.expand](d => ({
+
+    get(target: any, property: any) {
+        return d.getRegistry(target, property).get();
+    }
+}))
+
+class MyClass {
+    constructor(
+        @Param()
+        public a: string,
+    ) {
+
+    }
+
+    method1(
+        @Param()
+        a: number,
+    ) {
+
+    }
+}
+
+console.log(Param.get(MyClass, undefined));
+console.log(Param.get(MyClass, 'method1'));
+
+let instance = new MyClass('a');
+console.log(Param.get(instance, undefined));
+console.log(Param.get(instance, 'method1'));
+
