@@ -1,3 +1,4 @@
+import assert from 'assert';
 import mr from './metadata-registry';
 
 type Pointcut = { target: any, method: PropertyKey, args: any[] }
@@ -96,8 +97,6 @@ export const ProxitiveAop = (
 
 function assertIsFunction(o: any, k: PropertyKey) {
     let v: unknown = o[k];
-    if ('function' != typeof v) {
-        throw new Error(`${o.constructor.name}.${k.toString()} is not a function`)
-    }
+    assert(typeof v == 'function', `${o.constructor.name}.${k.toString()} is not a function`)
     return v;
 }

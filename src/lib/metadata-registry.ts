@@ -19,14 +19,15 @@ export default function<T>(
 
 abstract class Registry<T> {
 
-    private reflection: ReturnType<Registry<T>["reflect"]>;
+    private reflection!: ReturnType<Registry<T>["reflect"]>;
+    protected initReflection() {
+        this.reflection = this.reflect(this.getReflectionArgs(this.target));
+    }
 
     constructor(
         public key: any,
         public target: any,
-    ) {
-        this.reflection = this.reflect(target);
-    }
+    ) { }
 
     get() {
         return this.reflection.get()
@@ -55,13 +56,12 @@ abstract class Registry<T> {
             let parent = Reflect.getPrototypeOf(this.target);
             parent;
             parent = Reflect.getPrototypeOf(parent)
-        ) ret.push(this.reflect(parent).getOwn());
+        ) ret.push(this.reflect(this.getReflectionArgs(parent)).getOwn());
 
         return ret.filter((v: any): v is T => v != null);
     }
 
-    private reflect(t: Object) {
-        let args = this.getMetadataArgs(t);
+    protected reflect(args: [ Object, any ]) {
         return {
             get    :     () => Reflect.getMetadata   (this.key,    ...args) as T | undefined,
             getOwn :     () => Reflect.getOwnMetadata(this.key,    ...args) as T | undefined,
@@ -69,19 +69,23 @@ abstract class Registry<T> {
         }
     }
 
-    protected abstract getMetadataArgs(t: Object): [ Object, any ]
+    protected abstract getReflectionArgs(target: Object): [ Object, any ]
 }
 
 class ObjectRegistry<T> extends Registry<T> {
 
-    protected getMetadataArgs(t: Object): any {
-        return [ t ]
+    constructor(
+        key: any,
+        target: any,
+    ) {
+        super(key, target);
+        this.initReflection();
     }
+
+    protected getReflectionArgs(target: Object): any { return [ target ] }
 }
 
 class PropertyRegistry<T> extends Registry<T> {
-
-    readonly properties: Registry<PropertyKey[]>;
 
     constructor(
         key: any,
@@ -89,8 +93,28 @@ class PropertyRegistry<T> extends Registry<T> {
         public property: PropertyKey,
     ) {
         super(key, target);
+        this.initReflection();
+    }
 
-        this.properties = new ObjectRegistry<PropertyKey[]>(this.getKeyForProperties(), target);
+    #properties?: ObjectRegistry<PropertyKey[]>;
+    get properties() {
+        if (!this.#properties)
+            this.#properties = new ObjectRegistry<PropertyKey[]>(this.getKeyForProperties(),
+                                                                 this.target);
+        return this.#properties;
+    }
+
+    forEachProperty(
+        callback: (property: PropertyKey, get: () => T, getOwn: () => T | undefined) => void,
+    ) {
+        for (let p of new Set(this.properties.trace().flat())) {
+            let reflect = () => this.reflect([ this.target, p ]);
+            callback(
+                p,
+                () => reflect().get()!,
+                () => reflect().getOwn(),
+            )
+        }
     }
 
     override set(metadata: T) {
@@ -99,9 +123,7 @@ class PropertyRegistry<T> extends Registry<T> {
         return super.set(metadata);
     }
 
-    protected getMetadataArgs(t: Object): any {
-        return [ t, this.property ]
-    }
+    protected getReflectionArgs(t: Object): any { return [ t, this.property ] }
 
     private static KeyForProperties = new Map<any, any>();
     private getKeyForProperties() {

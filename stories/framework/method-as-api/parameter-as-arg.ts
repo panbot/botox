@@ -9,7 +9,7 @@ export class ApiOptions {
 
 const Api = api<{}>().methodAsApi(ctor => new ApiOptions(ctor.constructor.name))
 
-const Arg = apiarg<{}>().parameterAsArg()
+const Arg = apiarg<{}>().parameterAsArg(() => undefined)
 
 class MyApi {
 

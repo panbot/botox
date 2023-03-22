@@ -1,6 +1,6 @@
 import factory from '@/framework/api-arg';
 
-const Arg = factory<{}>().propertyAsArg()
+const Arg = factory<{}>().propertyAsArg(() => undefined)
 
 class MyApi {
 
@@ -9,10 +9,13 @@ class MyApi {
         .default('abcd')
         .optional(true)
         .priority(100)
-        .validator((v: string) => v.length < 100 ? undefined : 'too long')
     arg1!: string;
 }
 
 let instance = new MyApi()
 console.log(Arg.getRegistry(instance, 'arg1').get());
-console.log(Arg.getRegistry(instance, '').properties.trace());
+console.log(Arg.getRegistry(instance, 'arg2').get());
+console.log(Arg.getRegistry(instance, '').properties.trace().flat());
+Arg.getRegistry(instance, '').forEachProperty(
+    (p, get) => console.log(p, get())
+)

@@ -1,7 +1,8 @@
 import decorator, { Decorator } from "../lib/decorator";
+import expandify from "../lib/expandify";
 import { Constructor } from "../lib/types";
 
-export class ValidatableOptions<T = any> {
+export class Validatable<T = any> {
 
     constructor(
         public type: Constructor<any>,
@@ -26,20 +27,16 @@ export class ValidatableOptions<T = any> {
     }
 }
 
-export default function () {
+export default () => decorator('class')<{}>()(
+    type => new Validatable(type)
+)[expandify.expand](d => ({
 
-    const Validatable = decorator('class')<{}>()(type => new ValidatableOptions(type));
+    fromParser: <T>(
+        parser: (input: unknown) => T,
+    ) => d({ parser }) as Decorator<ClassDecorator, Validatable<T>>,
 
-    return Object.assign(Validatable, {
-
-        fromParser: <T>(
-            parser: (input: unknown) => T,
-        ) => Validatable({ parser }) as Decorator<ClassDecorator, ValidatableOptions<T>>,
-
-        get: (target: Constructor<any>) => Validatable.getRegistry(target).get(),
-
-    })
-}
+    get: (target: Constructor<any>) => d.getRegistry(target).get(),
+}))
 
 export type HTML_INPUT_TYPE
     = 'checkbox'

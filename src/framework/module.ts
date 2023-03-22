@@ -1,7 +1,7 @@
-import assert from "node:assert";
 import decorator from "../lib/decorator";
+import expandify from "../lib/expandify";
 import { Runnable } from "../lib/runnable";
-import { Constructor, Instantiator } from "../lib/types";
+import { Constructor } from "../lib/types";
 
 export type ModuleOptions<Module extends {}> = {
     name: string,
@@ -10,24 +10,15 @@ export type ModuleOptions<Module extends {}> = {
     dependencies?: () => Constructor<Module>[],
 }
 
-export class ModuleManager<Module extends {}> {
+export default <Module extends {}>() => expandify(decorator('class')<Module>()(
+    target => ({ name: target.name } as ModuleOptions<Module>)
+))[expandify.expand](d => ({
 
-    readonly decorator = decorator('class')<Module>()(target => this.createOptions(target));
+    getOptions(module: Constructor<Module>) {
+        return d.getRegistry(module).getOwn()
+    },
 
-    createOptions(target: Constructor<Module>) {
-        let options: ModuleOptions<Module> = { name: target.name };
-        return options;
-    }
-
-    getOptions(target: Constructor<Module>) {
-        let options = this.decorator.getRegistry(target).getOwn();
-        assert(options, `Module options for ${target.name} not found`);
-        return options;
-    }
-
-    resolveDependencies(
-        modules: Constructor<Module>[]
-    ) {
+    resolveDependencies(modules: Constructor<Module>[]) {
         let visited = new Set<Constructor<Module>>();
         const visit = (
             module: Constructor<Module>,
@@ -35,13 +26,15 @@ export class ModuleManager<Module extends {}> {
         ) => {
             if (visited.has(module)) return;
 
-            if (path.has(module)) throw new Error(
-                `circular dependency found, ` + [ ...path, module ].map(v => v.name).join(' -> ')
-            );
+            if (path.has(module)) throw new Error(`circular dependency`, { cause: {
+                path: [ ...path, module ].map(v => v.name).join(' -> ')
+            }});
             path.add(module);
 
-            this.getOptions(module).dependencies?.().forEach(
-                d => visit(d, new Set<Constructor<Module>>(path))
+            let options = this.getOptions(module);
+            if (!options) throw new Error(`module options not found`, { cause: { module } });
+            options.dependencies?.().forEach(
+                dep => visit(dep, new Set<Constructor<Module>>(path))
             );
 
             sorted.push(module);
@@ -53,5 +46,6 @@ export class ModuleManager<Module extends {}> {
         modules.forEach(m => visit(m));
 
         return sorted;
-    }
-}
+    },
+
+}))

@@ -1,6 +1,6 @@
 import factory from '@/framework/api-arg';
 
-const Arg = factory<{}>().parameterAsArg()
+const Arg = factory<{}>().parameterAsArg(() => undefined)
 
 class MyApi {
 

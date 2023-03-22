@@ -328,17 +328,9 @@ class MemberPropertyInjectionManager {
     }
 
     inject(instance: Object) {
-        let injections = new Map<PropertyKey, Injection>();
-        const properties = this.getRegistry(instance, '').properties.trace().flat();
-        for (let property of new Set(properties)) {
-            const injection = this.getRegistry(instance, property).get();
-            if (!injection) error('no injections found', { target: instance, property });
-
-            // this overrides parent injections if exists
-            injections.set(property, injection);
-        }
-
-        injections.forEach((i, p) => Reflect.defineProperty(instance, p, { value: this.develop(i) }));
+        this.getRegistry(instance, '').forEachProperty((property, get) => {
+            Reflect.defineProperty(instance, property, { value: this.develop(get()) });
+        })
     }
 }
 
@@ -354,8 +346,8 @@ function error(message: string, point?: {
 
         location += typeof target == 'function' ? target.name
                                                 : target.constructor.name;
-        if (property) location += '::' + property.toString();
-        else if (index != null) location += `::constructor(#${index})`;
+        if (property) location += '.' + property.toString();
+        else if (index != null) location += `.constructor(#${index})`;
     }
 
     throw new Error(message + location);

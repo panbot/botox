@@ -1,7 +1,6 @@
-import { ModuleManager } from '@/framework/module';
+import factory from '@/framework/module';
 
-let manager = new ModuleManager();
-const Module = manager.decorator;
+let Module = factory();
 
 @Module({
     name: 'my module',
@@ -9,7 +8,7 @@ const Module = manager.decorator;
 export class MyModule {
 
 }
-console.log(manager.getOptions(MyModule));
+console.log(Module.getOptions(MyModule));
 
 @Module(o => {
     o.dependencies = () => [ MyModule3 ];
@@ -17,10 +16,10 @@ console.log(manager.getOptions(MyModule));
 export class MyModule2 {
 
 }
-console.log(manager.getOptions(MyModule2));
+console.log(Module.getOptions(MyModule2));
 
 @Module().dependencies(() => [ MyModule ])
 export class MyModule3 {
 
 }
-console.log(manager.getOptions(MyModule3));
+console.log(Module.getOptions(MyModule3));
