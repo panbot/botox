@@ -1,85 +1,62 @@
-import decorator from "../lib/decorator";
+import decorator, { Decorator } from "../lib/decorator";
+import { Constructor } from "../lib/types";
 
-export type ValidatableOptions = {
-    parse?(input: unknown): any;
-    validate?(parsed: any): string | undefined;
-    inputype?: HTML_INPUT_TYPE,
+export class ValidatableOptions<T = any> {
+
+    constructor(
+        public type: Constructor<any>,
+    ) { }
+
+    parser: (input: unknown) => T = (v) => v as any;
+    validater?(parsed: T): string | undefined | false;
+    inputype?: HTML_INPUT_TYPE;
+
+    // "readonly" make this property invisible to decorator
+    readonly validate = (input: unknown) => {
+        let parsed = this.parser(input);
+        let error = this.validater?.(parsed);
+        if (error) throw new TypeError(error, {
+            cause: {
+                input,
+                validatable: this.type.name,
+            }
+        });
+
+        return parsed;
+    }
 }
 
 export default function () {
 
-    const decorate = decorator('class')<{}>()(() => ({}) as ValidatableOptions);
+    const Validatable = decorator('class')<{}>()(type => new ValidatableOptions(type));
 
-    const Validatable = <T>(
-        parse: (input: unknown) => T,
-        validate?: (parsed: T) => string | undefined,
-        inputype?: HTML_INPUT_TYPE,
-    ) => decorate({ parse, validate, inputype });
+    return Object.assign(Validatable, {
 
-    return {
-        Validatable,
-        get: decorate.getRegistry,
-    }
+        fromParser: <T>(
+            parser: (input: unknown) => T,
+        ) => Validatable({ parser }) as Decorator<ClassDecorator, ValidatableOptions<T>>,
+
+        get: (target: Constructor<any>) => Validatable.getRegistry(target).get(),
+
+    })
 }
 
-// TypedValidatable<string>()({
-//     parse: String,
-//     inputype: 'text',
-// })(String);
-
-// TypedValidatable<number>()({
-//     parse: Number,
-//     validate: parsed => isNaN(parsed) ? 'not a number'
-//                                       : undefined,
-//     inputype: 'number',
-// })(Number);
-
-// TypedValidatable<boolean>()({
-//     parse: Boolean,
-//     inputype: 'checkbox',
-// })(Boolean);
-
-// TypedValidatable<Date | undefined>()({
-//     parse: input => {
-//         switch (typeof input) {
-//             case 'string': case 'number': return new Date(input)
-//         }
-//         if (input instanceof Date) return input;
-//     },
-//     validate: parsed => parsed?.toString() == 'Invalid Date' ? 'Invalid Date'
-//                                                             : undefined,
-// })(Date)
-
-
-// Validatable(
-//     input => {
-//         switch (typeof input) {
-//             case 'string': case 'number': return new Date(input)
-//         }
-//         if (input instanceof Date) return input;
-//     },
-//     parsed => {
-//         let s = parsed?.toString();
-//         if (s == 'Invalid Date') return s;
-//     },
-//     'datetime-local'
-// )(Date);
-
-export type HTML_INPUT_TYPE = 'checkbox'
-                            | 'date'
-                            | 'datetime-local'
-                            | 'email'
-                            | 'file'
-                            | 'hidden'
-                            | 'image'
-                            | 'month'
-                            | 'number'
-                            | 'password'
-                            | 'radio'
-                            | 'range'
-                            | 'tel'
-                            | 'text'
-                            | 'time'
-                            | 'url'
-                            | 'week'
-                            ;
+export type HTML_INPUT_TYPE
+    = 'checkbox'
+    | 'date'
+    | 'datetime-local'
+    | 'email'
+    | 'file'
+    | 'hidden'
+    | 'image'
+    | 'month'
+    | 'number'
+    | 'password'
+    | 'radio'
+    | 'range'
+    | 'tel'
+    | 'text'
+    | 'time'
+    | 'url'
+    | 'week'
+;

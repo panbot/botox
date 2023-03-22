@@ -1,24 +1,28 @@
 import mr, { Anchors, AnchorType } from "./metadata-registry";
-import { Constructor } from "./types";
+import { Constructor, IsReadonly } from "./types";
 
 export default <T extends keyof typeof DecorationTypes>(on: T) => DecorationTypes[on];
 
-type AnyDecorator = (...args: any) => any;
-type RemoveFirst<T> = T extends [ any, ...infer U ] ? U : never;
-type ReplaceFirst<List extends Array<any>, First> = [ First, ...RemoveFirst<List> ];
-type IsConstructor<T extends AnyDecorator, U> = T extends ClassDecorator ? Constructor<U> : U;
-type ExposedArgs<T extends AnyDecorator, U> = ReplaceFirst<Parameters<T>, IsConstructor<T, U>>;
+type AnyDecorator = (...args: any) => any
+type RemoveFirst<T> = T extends [ any, ...infer U ] ? U : never
+type ReplaceFirst<List extends Array<any>, First> = [ First, ...RemoveFirst<List> ]
+type IsConstructor<T extends AnyDecorator, U> = T extends ClassDecorator ? Constructor<U> : U
+type ExposedArgs<T extends AnyDecorator, U> = ReplaceFirst<Parameters<T>, IsConstructor<T, U>>
 
 type Getter<T extends AnyDecorator, U extends AnchorType> = (
     args: Parameters<T>,
     getRegistry: Anchors<any>[U],
-) => any;
+) => any
 
 type Setter<T extends AnyDecorator, U extends AnchorType> = (
     args: Parameters<T>,
     getRegistry: Anchors<any>[U],
     value: any,
-) => void;
+) => void
+
+export type Decorator<D, T> = D & Required<{
+    [ P in keyof T as IsReadonly<T, P> extends true ? never : P ]: (v: T[P]) => Decorator<D, T>
+}>;
 
 const create = <DecoratorType extends AnyDecorator>(
 ) => <U extends AnchorType>(
@@ -31,10 +35,6 @@ const create = <DecoratorType extends AnyDecorator>(
     init : (...args: ExposedArgs<DecoratorType, T>) => Options,
 ) => {
     type Args = Parameters<DecoratorType>;
-    type CompleteOptions = Required<Options>;
-    type Decorator = DecoratorType & {
-        [ p in keyof CompleteOptions]: (v: CompleteOptions[p]) => Decorator
-    };
 
     const createDecorator = (
         base: (...args: Args) => any
@@ -50,7 +50,7 @@ const create = <DecoratorType extends AnyDecorator>(
                 (...args: Args) => { base(...args); get(args, getRegistry)[property as keyof Options] = value }
             )
         }
-    ) as Decorator;
+    ) as Decorator<DecoratorType, Required<Options>>;
 
     let decorator = (
         values?: Partial<Options>
