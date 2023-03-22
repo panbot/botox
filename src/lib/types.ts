@@ -16,3 +16,6 @@ export type IsReadonly<T, K extends keyof T> = IsEqual<
     {          [ P in K ]: T[K] },
     { readonly [ P in K ]: T[K] }
 > extends true ? true : false
+
+export type RemoveHead<T> = T extends [ any, ...infer U ] ? U : never
+export type RemoveTail<T> = T extends [ ...infer U, any ] ? U : never

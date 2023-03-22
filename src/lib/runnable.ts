@@ -1,4 +1,4 @@
-import { Constructor, Instantiator, RequiredKey } from "./types";
+import { Constructor, Instantiator, RemoveHead, RequiredKey } from "./types";
 import mr from './metadata-registry';
 
 export interface Runnable<T = unknown> {
@@ -11,9 +11,7 @@ export interface RunArgFactory<RunArg = unknown> {
     aroundRun?<T>(run: () => Promise<T>, r: Runnable<T>): Promise<T>;
 }
 
-type RemoveFirst<T> = T extends [ any, ...infer U ] ? U : never;
-type RunArgProducerArgs<T extends RunArgFactory> =
-    RemoveFirst<Parameters<T['produceRunArgFor']>>;
+type RunArgProducerArgs<T extends RunArgFactory> = RemoveHead<Parameters<T['produceRunArgFor']>>;
 
 type RunArgMetadata<T extends RunArgFactory = RunArgFactory> = {
     index: number,

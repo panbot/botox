@@ -1,25 +1,23 @@
+import { Key } from "readline";
+import { RemoveTail } from "./types";
 
-export class MapMap<KEYS extends any[], VALUE> {
+export class MapMap<Keys extends any[], Value> {
 
     map = new Map<any, any>();
 
-    get(...args: KEYS): VALUE {
-        let [ map, key ] = this.getMap(args.slice(0, args.length - 1));
-        return map.get(key as VALUE);
+    get(...keys: Keys): Value {
+        let key = keys.pop();
+        let map = this.getMap(keys as unknown as RemoveTail<Keys>);
+        return map?.get(key);
     }
 
-    set(...args: [ ...KEYS, VALUE ]) {
-        let [ map, key ] = this.getMap(args.slice(0, args.length - 1));
-        let value: any = args[args.length];
-        map.set(key, value);
+    set(...args: [ ...Keys, Value ]) {
+        let value = args.pop() as Value;
+        let keys = args as unknown as Keys;
 
-        return this;
-    }
-
-    private getMap(keys: any[]) {
         let map = this.map;
         while (keys.length > 1) {
-            let key = keys.unshift();
+            let key = keys.shift();
             let next = map.get(key);
             if (!next) {
                 next = new Map<any, any>();
@@ -27,6 +25,19 @@ export class MapMap<KEYS extends any[], VALUE> {
             }
             map = next;
         }
-        return [ map, keys[0] ]
+        map.set(keys[0], value);
+
+        return this;
+    }
+
+    getMap(keys: RemoveTail<Keys>) {
+        let map = this.map;
+        while (keys.length) {
+            let key = keys.shift();
+            let next = map.get(key);
+            if (!next) return;
+            map = next;
+        }
+        return map;
     }
 }

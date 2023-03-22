@@ -1,11 +1,10 @@
 import mr, { Anchors, AnchorType } from "./metadata-registry";
-import { Constructor, IsReadonly } from "./types";
+import { Constructor, IsReadonly, RemoveHead } from "./types";
 
 export default <T extends keyof typeof DecorationTypes>(on: T) => DecorationTypes[on];
 
 type AnyDecorator = (...args: any) => any
-type RemoveFirst<T> = T extends [ any, ...infer U ] ? U : never
-type ReplaceFirst<List extends Array<any>, First> = [ First, ...RemoveFirst<List> ]
+type ReplaceFirst<List extends Array<any>, First> = [ First, ...RemoveHead<List> ]
 type IsConstructor<T extends AnyDecorator, U> = T extends ClassDecorator ? Constructor<U> : U
 type ExposedArgs<T extends AnyDecorator, U> = ReplaceFirst<Parameters<T>, IsConstructor<T, U>>
 
