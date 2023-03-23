@@ -15,7 +15,7 @@ class ValidatableOptions<T = any> {
     }
 }
 
-const Decorator = decorator("class")()(() => new ValidatableOptions())()
+const Decorator = decorator("class").init(() => new ValidatableOptions())()
 type Decorator = typeof Decorator;
 
 type Keys = keyof Decorator;
@@ -23,7 +23,7 @@ type Keys = keyof Decorator;
 type ParserKeyExists = Keys & "parser";
 //   ^?
 
-type ValidatorKeyExists = Decorator["validater"];
+type ValidatorKeyExists = Keys & "validater";
 //   ^?
 
 type ValidateKeyExists = Keys & "validate";

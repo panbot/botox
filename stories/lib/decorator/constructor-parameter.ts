@@ -1,14 +1,12 @@
 import decorator from "@/lib/decorator";
 import expandify from "@/lib/expandify";
-import { Constructor } from "@/lib/types";
-
 
 type Position = {
     target: Object,
     index: number,
     ctor: any,
 };
-const Param = expandify(decorator('parameter')<{}>()(
+const Param = expandify(decorator('parameter').init(
     (target, property, index) => ({
         target,
         index,

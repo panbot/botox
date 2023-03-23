@@ -122,7 +122,7 @@ export default function () {
 
             return instance;
         } catch (e) {
-            throw excavateUnknownError(e);
+            throw e;
         } finally {
             loop.delete(ctor);
         }
@@ -329,7 +329,7 @@ class MemberPropertyInjectionManager {
 
     inject(instance: Object) {
         this.getRegistry(instance, '').forEachProperty((property, get) => {
-            Reflect.defineProperty(instance, property, { value: this.develop(get()) });
+            Reflect.defineProperty(instance, property!, { value: this.develop(get()) });
         })
     }
 }
@@ -351,17 +351,4 @@ function error(message: string, point?: {
     }
 
     throw new Error(message + location);
-}
-
-function excavateUnknownError(unknownError: any) {
-    if (unknownError instanceof Error) throw unknownError;
-
-    return new Error(
-        asString(unknownError) ||
-        asString(unknownError?.message) ||
-        'unknown error');
-
-    function asString(v: unknown) {
-        if (typeof v == 'string') return v;
-    }
 }

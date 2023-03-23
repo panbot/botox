@@ -1,8 +1,14 @@
 function expandify<O extends {}>(o: O) {
+
+    const expander: {
+        <Expansion>(by: (base: O) => Expansion): O & Expansion,
+        <Expansion>(by: Expansion & ThisType<O & Expansion>): O & Expansion,
+    } = (
+        by: any
+    ) => Object.assign(o, typeof by == 'function' ? by(o) : o);
+
     return Object.assign(o, {
-        [expandify.expand]: <Expansion>(
-            by: (base: O) => Expansion,
-        ) => expandify(Object.assign(o, by(o))),
+        [expandify.expand]: expander,
     })
 }
 
