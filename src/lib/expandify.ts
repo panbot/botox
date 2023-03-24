@@ -5,7 +5,7 @@ function expandify<O extends {}>(o: O) {
         <Expansion>(by: Expansion & ThisType<O & Expansion>): O & Expansion,
     } = (
         by: any
-    ) => Object.assign(o, typeof by == 'function' ? by(o) : o);
+    ) => Object.assign(o, typeof by == 'function' ? by(o) : by);
 
     return Object.assign(o, {
         [expandify.expand]: expander,

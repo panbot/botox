@@ -1,24 +1,25 @@
-export type Constructor<T> = new (...args: any[]) => T
+export type CONSTRUCTOR<T> = new (...args: any[]) => T
 
-export type Instantiator = <T>(type: Constructor<T>) => T
+export type INSTANTIATOR = <T>(type: CONSTRUCTOR<T>) => T
 
-export type Maybe<T> = T | undefined;
+export type MAYBE<T> = T | undefined;
 
-export type RequiredKey<T, K extends keyof T> = {
+export type REQUIRED_KEY<T, K extends keyof T> = {
     [P in K]-?: T[P];
 } & Omit<T, K>
 
-export type IsEqual<X, Y> = (
+export type IS_EQUAL<X, Y> = (
     <T>() => T extends X ? true : false
 ) extends (
     <T>() => T extends Y ? true : false
 ) ? true : false
 
-export type IsReadonly<T, K extends keyof T> = IsEqual<
-    {          [ P in K ]: T[K] },
-    { readonly [ P in K ]: T[K] }
-> extends true ? true : false
-
-export type RemoveHead<T> = T extends [ any, ...infer U ] ? U : never
+export type REMOVE_HEAD<T> = T extends [ any, ...infer U ] ? U : never
 export type RemoveTail<T> = T extends [ ...infer U, any ] ? U : never
 export type GetHead<T> = T extends [ infer U, ...any ] ? U : never
+
+
+export function typram<T>() { new typram.Param<T> }
+export namespace typram {
+    export class Param<T> {}
+}

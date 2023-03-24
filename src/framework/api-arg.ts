@@ -1,11 +1,11 @@
 import "reflect-metadata";
 import decorator from "../lib/decorator";
 import expandify from "../lib/expandify";
-import { Constructor } from "../lib/types";
+import { CONSTRUCTOR } from "../lib/types";
 import { Validatable } from "./validatable";
 
 export type ApiArgOptions = {
-    type: Constructor<any>,
+    type: CONSTRUCTOR<any>,
     doc?: string,
     optional?: boolean,
     default?: any,
@@ -16,7 +16,7 @@ export type ApiArgOptions = {
 export default function<Api extends {}>() {
 
     const create = (
-        getValidatable: (type: Constructor<any>) => Validatable<any> | undefined,
+        getValidatable: (type: CONSTRUCTOR<any>) => Validatable<any> | undefined,
         type: any,
     ) => ({
         type,
@@ -26,7 +26,7 @@ export default function<Api extends {}>() {
     return {
 
         propertyAsArg: (
-            getValidatable: (type: Constructor<any>) => Validatable<any> | undefined,
+            getValidatable: (type: CONSTRUCTOR<any>) => Validatable<any> | undefined,
         ) => decorator('property')<Api>()(
             (target, property) => create(
                 getValidatable,
@@ -41,7 +41,7 @@ export default function<Api extends {}>() {
         })),
 
         parameterAsArg: (
-            getValidatable: (type: Constructor<any>) => Validatable<any> | undefined,
+            getValidatable: (type: CONSTRUCTOR<any>) => Validatable<any> | undefined,
         ) => decorator('parameter')<Api>()(
             (target, property, index) => create(
                 getValidatable,

@@ -1,11 +1,11 @@
 import decorator, { Decorator } from "../lib/decorator";
 import expandify from "../lib/expandify";
-import { Constructor } from "../lib/types";
+import { CONSTRUCTOR } from "../lib/types";
 
 export class Validatable<T = any> {
 
     constructor(
-        public type: Constructor<any>,
+        public type: CONSTRUCTOR<any>,
     ) { }
 
     parser: (input: unknown) => T = (v) => v as any;
@@ -35,7 +35,7 @@ export default () => decorator('class')<{}>()(
         parser: (input: unknown) => T,
     ) => d({ parser }) as Decorator<ClassDecorator, Validatable<T>>,
 
-    get: (target: Constructor<any>) => d.getRegistry(target).get(),
+    get: (target: CONSTRUCTOR<any>) => d.getRegistry(target).get(),
 }))
 
 export type HTML_INPUT_TYPE

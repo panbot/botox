@@ -1,28 +1,28 @@
 import decorator from "../lib/decorator";
 import expandify from "../lib/expandify";
 import { Runnable } from "../lib/runnable";
-import { Constructor } from "../lib/types";
+import { CONSTRUCTOR } from "../lib/types";
 
 export type ModuleOptions<Module extends {}> = {
     name: string,
-    controllers?: Constructor<any>[],
+    controllers?: CONSTRUCTOR<any>[],
     apis?: Runnable<any>,
-    dependencies?: () => Constructor<Module>[],
+    dependencies?: () => CONSTRUCTOR<Module>[],
 }
 
 export default <Module extends {}>() => expandify(decorator('class')<Module>()(
     target => ({ name: target.name } as ModuleOptions<Module>)
 ))[expandify.expand](d => ({
 
-    getOptions(module: Constructor<Module>) {
+    getOptions(module: CONSTRUCTOR<Module>) {
         return d.getRegistry(module).getOwn()
     },
 
-    resolveDependencies(modules: Constructor<Module>[]) {
-        let visited = new Set<Constructor<Module>>();
+    resolveDependencies(modules: CONSTRUCTOR<Module>[]) {
+        let visited = new Set<CONSTRUCTOR<Module>>();
         const visit = (
-            module: Constructor<Module>,
-            path = new Set<Constructor<Module>>()
+            module: CONSTRUCTOR<Module>,
+            path = new Set<CONSTRUCTOR<Module>>()
         ) => {
             if (visited.has(module)) return;
 
@@ -34,14 +34,14 @@ export default <Module extends {}>() => expandify(decorator('class')<Module>()(
             let options = this.getOptions(module);
             if (!options) throw new Error(`module options not found`, { cause: { module } });
             options.dependencies?.().forEach(
-                dep => visit(dep, new Set<Constructor<Module>>(path))
+                dep => visit(dep, new Set<CONSTRUCTOR<Module>>(path))
             );
 
             sorted.push(module);
             visited.add(module);
         }
 
-        let sorted: Constructor<Module>[] = [];
+        let sorted: CONSTRUCTOR<Module>[] = [];
 
         modules.forEach(m => visit(m));
 

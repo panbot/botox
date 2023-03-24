@@ -1,138 +1,145 @@
+import { metadata_registry_factory as mrf } from "./metadata-registry-factory";
+import assert from "assert";
 import expandify from "./expandify";
-import mr, { ANCHORS, METADATA_REGISTRY_ANCHOR } from "./metadata-registry";
-import { Constructor, IsReadonly, RemoveHead } from "./types";
+import { IS_EQUAL, REMOVE_HEAD, typram } from "./types";
 
-export default function<DT extends DECORATOR_TYPE>(on: DT) {
-    return decorators[on];
-}
-
-export type Decorator<D, T> = D & Required<{
-    [ P in keyof NonReadonly<T> ]: (v: T[P]) => Decorator<D, T>
+export type DECORATOR<D, T> = D & Required<{
+    [ P in keyof NON_READONLY<T> ]: (v: T[P]) => DECORATOR<D, T>
 }>;
 
-type DECORATOR  =     ClassDecorator
-                |    MethodDecorator
-                |  PropertyDecorator
-                | ParameterDecorator
-;
-
-export type DECORATOR_TYPE
-    = 'class'
-    | 'method'
-    | 'property'
-    | 'parameter'
-    | 'instance_method'
-    |   'static_method'
-    | 'instance_property'
-    |   'static_property'
-    | 'instance_method_parameter'
-    |   'static_method_parameter'
-    |     'constructor_parameter'
-;
-
-type ReplaceFirst<List extends Array<any>, First> = [ First, ...RemoveHead<List> ]
-type NonReadonly<T> = {
-    [ P in keyof T as IsReadonly<T, P> extends true ? never : P ]: T[P]
-}
+type ARGS<T extends DECORATOR_TYPE> = Parameters<DECORATORS[T]>
+type REPLACE_HEAD<LIST, HEAD> = [ HEAD, ...REMOVE_HEAD<LIST> ]
+type ARG0<TARGET> = TARGET;
 
 const create = <
+    DT extends DECORATOR_TYPE,
     TARGET_AS,
-    REGISTRY_VALUE_AS,
-    D extends DECORATOR,
 >(
-) => <MRA extends METADATA_REGISTRY_ANCHOR>(
-    anchor: MRA,
-    set: SETTER<D, MRA>,
+    decorator_type: DT,
+    set: <T>(
+        args: ARGS<DT>,
+        get_registry: REGISTRY_SIGNATURES<T>[DT],
+        value: T
+    ) => void,
+    target_as?: typram.Param<TARGET_AS>,
+) => <OPTIONS extends {}, TARGET>(
+    init_by: (...args: REPLACE_HEAD<ARGS<DT>, ARG0<TARGET>>) => OPTIONS,
+    target?: typram.Param<TARGET>,
 ) => {
-    type REGISTRY_VALUE<T> = REGISTRY_VALUE_AS extends `array` ? T[] : T;
+    let factory = (
+        values?
+            : Partial<OPTIONS>
+            | ( (options: OPTIONS) => void )
+    ) => {
+        let works: ((o: OPTIONS) => void)[] = [];
 
-    return {
-        target: createTarget(),
-        init: createInit<Object>(),
+        return new Proxy(
+            (...args: ARGS<DT>) => {
+                let options = init_by(...args as any as REPLACE_HEAD<ARGS<DT>, ARG0<TARGET>>);
+
+                if (typeof values == 'function') values(options);
+                else Object.assign(options, values);
+
+                works.forEach(work => work(options));
+
+                set(args, get_registry, options);
+            }, {
+                get: (_, k, r) => (v: any) => {
+                    // @TODO: check if k is keyof OPTIONS
+                    works.push(o => o[k as keyof OPTIONS] = v);
+                    return r;
+                }
+            }
+        ) as DECORATOR<DECORATORS[DT], OPTIONS>
     }
 
-    function createTarget() {
-        return <TARGET>() => ({ init: createInit<TARGET>() })
-    }
+    const get_registry = registry_factory(mrf.key<OPTIONS>(), decorator_type);
 
-    function createInit<TARGET>() {
-        type ARG0 = TARGET_AS extends 'constructor'
-            ? Constructor<TARGET>
-            : TARGET_AS extends 'instance'
-                ? TARGET
-                : TARGET | Constructor<TARGET>
-        ;
-        type ARGS = ReplaceFirst<Parameters<D>, ARG0>;
+    return expandify(factory)[expandify.expand]({
+        get_registry,
+    })
+}
 
-        return <OPTIONS extends {}>(
-            initBy: (...args: ARGS) => OPTIONS
-        ) => {
-            const factory = (
-                values?: Partial<OPTIONS>
-                        | ( (options: OPTIONS) => void )
-            ) => {
-                let works: ((o: OPTIONS) => void)[] = [];
-                return new Proxy(
-                    (...args: Parameters<D>) => {
-                        let options = initBy(...args as any as ARGS);
+type DECORATORS = {
+    class     :     ClassDecorator,
+    property  :  PropertyDecorator,
+    method    :    MethodDecorator,
+    parameter : ParameterDecorator,
+};
+type DECORATOR_TYPE = keyof DECORATORS;
 
-                        if (typeof values == 'function') values(options);
-                        else Object.assign(options, values);
+type REGISTRY_SIGNATURES<T> = {
+    class     : (target: Object                        ) => mrf.Reflection<T>,
+    property  : (target: Object, property : PropertyKey) => mrf.Reflection<T>,
+    method    : (target: Object, property?: PropertyKey) => mrf.Reflection<T>,
+    parameter : (target: Object, property?: PropertyKey) => mrf.Reflection<T[]>,
+}
 
-                        works.forEach(work => work(options));
+function registry_factory<
+    T,
+    D extends DECORATOR_TYPE
+>(
+    key: mrf.Key<T>,
+    type: D
+): REGISTRY_SIGNATURES<T>[D];
+function registry_factory(k: any, t: any) {
+    switch (t) {
+        case 'class':     return mrf.class_factory(k);
+        case 'property':  return (t: any, p : any) => mrf.property_factory(k)(t, p);
+        case 'method':
+        case 'parameter': return (t: any, p?: any) => mrf.property_factory(k)(t, p);
 
-                        set(args, getRegistry, options);
-                    },
-                    {
-                        get: (_, k, r) => (v: any) => {
-                            works.push(o => o[k as keyof OPTIONS] = v);
-                            return r;
-                        }
-                    }
-                ) as Decorator<D, OPTIONS>;
-            };
-
-            const getRegistry = mr<REGISTRY_VALUE<OPTIONS>>(factory)(anchor);
-            type GeRegistry = (
-                ...args: ReplaceFirst<Parameters<typeof getRegistry>, ARG0>
-            ) => ReturnType<typeof getRegistry>;
-
-            return expandify(factory)[expandify.expand]({
-                getRegistry: getRegistry as unknown as GeRegistry,
-            })
-        }
+        default: assert(false, 'should not be here');
     }
 }
 
-type SETTER<D extends DECORATOR, MRA extends METADATA_REGISTRY_ANCHOR> = (
-    args: Parameters<D>,
-    registry: ANCHORS<any>[MRA],
-    value: any,
-) => void
-
-const SETTERS: {
-    class     : SETTER<     ClassDecorator, 'class'    >,
-    property  : SETTER<  PropertyDecorator, 'property' >,
-    parameter : SETTER< ParameterDecorator, 'property' >,
-} = {
-    class     : ([ t       ], gr, v) => gr(t   ).set(v),
-    property  : ([ t, p    ], gr, v) => gr(t, p).set(v),
-    parameter : ([ t, p, i ], gr, v) => gr(t, p).getOrSet([])[i] = v,
+export type IS_READONLY<T, K extends keyof T> = IS_EQUAL<
+    {          [ P in K ]: T[K] },
+    { readonly [ P in K ]: T[K] }
+> extends true ? true : false
+type NON_READONLY<T> = {
+    [ P in keyof T as IS_READONLY<T, P> extends true ? never : P ]: T[P]
 }
 
-const decorators = {
-    'class': create<'constructor', '', ClassDecorator>()('class', SETTERS.class),
+const create_class_decorator = create(
+    'class',
+    (
+        [ target ],
+        get_registry,
+        value,
+    ) => get_registry(target).set(value),
+);
 
-             'method': create<           '', '', MethodDecorator>()('property', SETTERS.property),
-    'instance_method': create<   'instance', '', MethodDecorator>()('property', SETTERS.property),
-      'static_method': create<'constructor', '', MethodDecorator>()('property', SETTERS.property),
+const create_property_decorator = create(
+    'property',
+    (
+        [ target, property ],
+        get_registry,
+        value,
+    ) => get_registry(target, property).set(value),
+);
 
-             'property': create<           '', '', PropertyDecorator>()('property', SETTERS.property),
-    'instance_property': create<   'instance', '', PropertyDecorator>()('property', SETTERS.property),
-      'static_property': create<'constructor', '', PropertyDecorator>()('property', SETTERS.property),
+const create_method_decorator = create(
+    'method',
+    (
+        [ target, property ],
+        get_registry,
+        value,
+    ) => get_registry(target, property).set(value),
+);
 
-                    'parameter': create<           '', 'array', ParameterDecorator>()('property', SETTERS.parameter),
-    'instance_method_parameter': create<   'instance', 'array', ParameterDecorator>()('property', SETTERS.parameter),
-      'static_method_parameter': create<'constructor', 'array', ParameterDecorator>()('property', SETTERS.parameter),
-        'constructor_parameter': create<'constructor', 'array', ParameterDecorator>()('property', SETTERS.parameter),
+const create_parameter_decorator = create(
+    'parameter',
+    (
+        [ target, property, index ],
+        get_registry,
+        value,
+    ) => get_registry(target, property).get_or_set([])[index] = value,
+);
+
+export default {
+    create_class_decorator,
+    create_property_decorator,
+    create_method_decorator,
+    create_parameter_decorator,
 }

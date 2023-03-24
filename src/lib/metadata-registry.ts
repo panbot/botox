@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { Maybe } from "./types";
+import { MAYBE } from "./types";
 
 export type ANCHORS<T> = {
     'class'    : ( target: Object                        ) =>   ObjectRegistry<T>,
@@ -210,20 +210,20 @@ class ParameterRegistry<T> extends Registry<T> {
     constructor(
         key: any,
         target: any,
-        public property: Maybe<PropertyKey>,
+        public property: MAYBE<PropertyKey>,
     ) {
         super(key, target);
         this.initReflection();
     }
 
-    #properties?: Properties<Maybe<PropertyKey>>;
+    #properties?: Properties<MAYBE<PropertyKey>>;
     get properties() {
-        if (!this.#properties) this.#properties = new Properties<Maybe<PropertyKey>>(this.key, this.target);
+        if (!this.#properties) this.#properties = new Properties<MAYBE<PropertyKey>>(this.key, this.target);
         return this.#properties;
     }
 
     forEachProperty(
-        callback: (property: Maybe<PropertyKey>, get: () => T, getOwn: () => T | undefined) => void,
+        callback: (property: MAYBE<PropertyKey>, get: () => T, getOwn: () => T | undefined) => void,
     ) {
         for (let p of this.properties.get()) {
             let reflect = () => this.reflect([ this.target, p ]);

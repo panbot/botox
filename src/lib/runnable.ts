@@ -1,4 +1,4 @@
-import { Constructor, Instantiator, RemoveHead, RequiredKey } from "./types";
+import { CONSTRUCTOR, INSTANTIATOR, REMOVE_HEAD, REQUIRED_KEY } from "./types";
 import mr from './metadata-registry';
 
 export interface Runnable<T = unknown> {
@@ -11,26 +11,26 @@ export interface RunArgFactory<RunArg = unknown> {
     aroundRun?<T>(run: () => Promise<T>, r: Runnable<T>): Promise<T>;
 }
 
-type RunArgProducerArgs<T extends RunArgFactory> = RemoveHead<Parameters<T['produceRunArgFor']>>;
+type RunArgProducerArgs<T extends RunArgFactory> = REMOVE_HEAD<Parameters<T['produceRunArgFor']>>;
 
 type RunArgMetadata<T extends RunArgFactory = RunArgFactory> = {
     index: number,
-    Factory: Constructor<T>,
+    Factory: CONSTRUCTOR<T>,
     args: RunArgProducerArgs<T>,
 };
 
-type Arounder = RequiredKey<RunArgFactory, "aroundRun">;
+type Arounder = REQUIRED_KEY<RunArgFactory, "aroundRun">;
 function factoryIsArounder(factory: RunArgFactory): factory is Arounder {
     return factory.aroundRun != null;
 }
 
 export default function (
-    instantiate: Instantiator,
+    instantiate: INSTANTIATOR,
 ) {
     const reg = mr<RunArgMetadata[]>()('property');
 
     const RunArg = <T extends RunArgFactory>(
-        Factory: Constructor<T>,
+        Factory: CONSTRUCTOR<T>,
         ...args: RunArgProducerArgs<T>
     ) => <U>(
         proto: Runnable<U>,

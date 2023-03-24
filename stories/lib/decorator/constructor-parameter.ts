@@ -6,7 +6,7 @@ type Position = {
     index: number,
     ctor: any,
 };
-const Param = expandify(decorator('parameter').init(
+const Param = expandify(decorator.create_parameter_decorator(
     (target, property, index) => ({
         target,
         index,
@@ -15,7 +15,7 @@ const Param = expandify(decorator('parameter').init(
 ))[expandify.expand](d => ({
 
     get(target: any, property: any) {
-        return d.getRegistry(target, property).get();
+        return d.get_registry(target, property).get();
     }
 }))
 

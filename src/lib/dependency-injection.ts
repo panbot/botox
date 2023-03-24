@@ -1,11 +1,11 @@
-import { Constructor } from './types';
+import { CONSTRUCTOR } from './types';
 import mr from './metadata-registry';
 
 export default function () {
     let services = new Map<ServiceKey, {
         instance?: any,
         factory?: (getter: Getter) => any,
-        ctor?: Constructor<any>,
+        ctor?: CONSTRUCTOR<any>,
         multiple?: ServiceKey[],
     }>();
     let eventHandlers: Record<Events, Function[]> = {
@@ -44,7 +44,7 @@ export default function () {
     function Service() {
         const arg = arguments[0];
 
-        return (ctor: Constructor<any>) => {
+        return (ctor: CONSTRUCTOR<any>) => {
             if (typeof arg == 'string') {
                 services.set(arg, { ctor });
             } else if (arg instanceof Token) {
@@ -67,7 +67,7 @@ export default function () {
     }
 
     function get(name: string): any;
-    function get<T>(type: Constructor<T>): T;
+    function get<T>(type: CONSTRUCTOR<T>): T;
     function get<T>(token: TokenType<T>): T;
     function get(arg: ServiceKey): any {
         let service = services.get(arg);
@@ -103,10 +103,10 @@ export default function () {
     } as const;
 
     // to handle depencency loop
-    let loop = new Map<Constructor<any>, any>();
+    let loop = new Map<CONSTRUCTOR<any>, any>();
     function instantiate<T>(
-        ctor: Constructor<T>,
-        args?: ConstructorParameters<Constructor<T>>,
+        ctor: CONSTRUCTOR<T>,
+        args?: ConstructorParameters<CONSTRUCTOR<T>>,
     ): T {
         if (loop.has(ctor)) return loop.get(ctor);
 
@@ -140,7 +140,7 @@ export default function () {
     }
 
     function set<T>(name: string, instance: T): void;
-    function set<T>(type: Constructor<T>, instance: T): void;
+    function set<T>(type: CONSTRUCTOR<T>, instance: T): void;
     function set<T>(token: TokenType<T>, instance: T): void;
     function set(k: any, instance: any) { services.set(k, { instance }) }
 
@@ -226,7 +226,7 @@ class Token<T> {
 
 export type TokenType<T = any> = Token<T>;
 
-type ServiceKey = string | TokenType | Constructor<any>;
+type ServiceKey = string | TokenType | CONSTRUCTOR<any>;
 type Getter     = (v: ServiceKey) => any;
 type Developer  = (v: Injection) => any;
 type Events     = 'instantiated';
@@ -243,7 +243,7 @@ interface Injection<P extends Point = Point> {
     name?: string;
     type?: () => any;
     token?: TokenType;
-    ctor?: Constructor<any>;
+    ctor?: CONSTRUCTOR<any>;
 }
 
 type ConstructorParameterInjection = Injection<{
@@ -269,7 +269,7 @@ class ConstructorParameterInjectionManager {
         return injection;
     }
 
-    instantiate(ctor: Constructor<any>, args: any[] = []) {
+    instantiate(ctor: CONSTRUCTOR<any>, args: any[] = []) {
         return new ctor(
             ...this.getRegistry(ctor).get()?.reduce(
                 (pv, cv) => ( pv[cv.point.index] = this.develop(cv), pv ),
