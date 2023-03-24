@@ -1,4 +1,3 @@
-import { Key } from "readline";
 import { RemoveTail } from "./types";
 
 export class MapMap<Keys extends any[], Value> {

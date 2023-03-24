@@ -1,6 +1,6 @@
 import expandify from "./expandify";
 import mr, { ANCHORS, METADATA_REGISTRY_ANCHOR } from "./metadata-registry";
-import { CONSTRUCTOR, IsReadonly, REMOVE_HEAD } from "./types";
+import { CONSTRUCTOR, REMOVE_HEAD } from "./types";
 
 export default function<DT extends DECORATOR_TYPE>(on: DT) {
     return decorators[on];

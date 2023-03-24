@@ -1,18 +1,20 @@
 import decorator from "@/lib/decorator";
 import expandify from "@/lib/expandify";
+import { typram } from "@/lib/types";
 
 type Position = {
     target: Object,
     index: number,
     ctor: any,
 };
-const Param = expandify(decorator.create_parameter_decorator(
-    (target, property, index) => ({
+const Param = expandify(decorator.create_parameter_decorator({
+    init_by: (target, property, index) => ({
         target,
         index,
         ctor: Reflect.getMetadata('design:paramtypes', target, property)[index],
-    } as Position)
-))[expandify.expand](d => ({
+    } as Position),
+    target: typram<{}>(),
+}))[expandify.expand](d => ({
 
     get(target: any, property: any) {
         return d.get_registry(target, property).get();

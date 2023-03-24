@@ -8,7 +8,7 @@ export type REQUIRED_KEY<T, K extends keyof T> = {
     [P in K]-?: T[P];
 } & Omit<T, K>
 
-export type IS_EQUAL<X, Y> = (
+export type IS<X, Y> = (
     <T>() => T extends X ? true : false
 ) extends (
     <T>() => T extends Y ? true : false
@@ -19,7 +19,16 @@ export type RemoveTail<T> = T extends [ ...infer U, any ] ? U : never
 export type GetHead<T> = T extends [ infer U, ...any ] ? U : never
 
 
-export function typram<T>() { new typram.Param<T> }
+export function typram<T>() { return new typram.Param<T>() }
 export namespace typram {
-    export class Param<T> {}
+
+    export function factory<CONSTRAINT>() {
+        return <T extends CONSTRAINT>() => new Param<T>
+    }
+
+    export class Param<T> {
+        // an impossible signature to match to avoid mistakes like:
+        // let t: typram.Param<any> = typram<T>
+        #t!: T
+    }
 }
