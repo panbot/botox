@@ -72,8 +72,22 @@ class Options {
         }
     }
 
+    class AnotherTarget {
+        static method(
+            @static_method_parameter_decorator()
+            arg1: number,
+        ) {
+
+        }
+    }
+
     let registry = static_method_parameter_decorator.get_registry(Target, 'method');
     let args = registry.get_own();
     asserts.assert_true< IS<typeof args, MAYBE<Options[]>> >();
     console.log(args);
+
+    console.log(static_method_parameter_decorator.get_registry(Target, 'method2').get_own());
+    console.log(static_method_parameter_decorator.get_registry(AnotherTarget, 'method').get_own());
+    console.log(static_method_parameter_decorator.get_registry(AnotherTarget, 'method2').get_own());
+
 }

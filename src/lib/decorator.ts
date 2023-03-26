@@ -118,13 +118,13 @@ function registry_factory<
         case 'property':
         case 'method'  : {
             let f: REGISTRY_FACTORY_SIGNATURES<FIELDS>["property"]
-                = (t, p) => mrf.property_factory(mrf.key<FIELDS>())(t, p);
+                = mrf.property_factory(mrf.key<FIELDS>());
             return f as any;
         }
 
         case 'parameter': {
             let f: REGISTRY_FACTORY_SIGNATURES<FIELDS>["parameter"]
-                = (t, p) => mrf.property_factory(mrf.key<FIELDS[]>())(t, p);
+                = mrf.property_factory(mrf.key<FIELDS[]>());
             return f as any;
         }
 

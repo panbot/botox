@@ -26,4 +26,8 @@ class Target {
 
 }
 
+class Target2 {
+
+}
+
 console.log(class_decorator.get_registry(Target).get()?.name);
