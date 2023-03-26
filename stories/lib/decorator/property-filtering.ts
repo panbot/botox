@@ -1,4 +1,6 @@
 import decorator from "@/lib/decorator";
+import { IS } from "@/lib/types";
+import { assert_true } from "stories/asserts";
 
 class ValidatableOptions<T = any> {
 
@@ -15,16 +17,18 @@ class ValidatableOptions<T = any> {
     }
 }
 
-const Decorator = decorator("class").init(() => new ValidatableOptions())()
-type Decorator = typeof Decorator;
+const Validatable = decorator.create_class_decorator({
+    init_by: () => new ValidatableOptions(),
+    target: decorator.target<{}>(),
+})
 
-type Keys = keyof Decorator;
+type Keys = keyof ReturnType<typeof Validatable>;
 
 type ParserKeyExists = Keys & "parser";
-//   ^?
+assert_true< IS<Keys & "parser", "parser"> >();
 
 type ValidatorKeyExists = Keys & "validater";
-//   ^?
+assert_true< IS<Keys & "validater", "validater"> >();
 
 type ValidateKeyExists = Keys & "validate";
-//   ^?
+assert_true< IS<Keys & "validate", never> >();

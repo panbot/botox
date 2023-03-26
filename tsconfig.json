@@ -9,6 +9,8 @@
         "noImplicitOverride": true,
         "noUncheckedIndexedAccess": true,
 
+        "isolatedModules": true,
+
         "sourceMap": false,
         "typeRoots": [
             "node_modules/@types"

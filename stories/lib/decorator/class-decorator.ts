@@ -1,17 +1,29 @@
 import decorator from "@/lib/decorator";
-import { CONSTRUCTOR, IS, typram } from "@/lib/types";
-import { assert_of_type, assert_true } from "stories/assert";
+import { CONSTRUCTOR, IS } from "@/lib/types";
+import * as asserts from "stories/asserts";
 
 class Options {
+    name?: string;
+}
+
+const class_decorator = decorator.create_class_decorator({
+    init_by: t => {
+        asserts.assert_true<IS<typeof t, CONSTRUCTOR<{}>>>();
+        return new Options();
+    },
+    target: decorator.target<{}>(),
+});
+
+{
+    type T = typeof class_decorator["get_registry"];
+    asserts.assert_true  <IS<Parameters<T>[0], CONSTRUCTOR<{}>>>();
+    asserts.assert_false <IS<Parameters<T>[0], {}>>();
+}
+
+@class_decorator()
+    .name('test target')
+class Target {
 
 }
 
-const dec = decorator.create_class_decorator({
-    target: typram<{}>(),
-    init_by: t => {
-        assert_of_type<CONSTRUCTOR<{}>>(t)
-        return new Options()
-    }
-})
-
-assert_true<IS<Parameters<typeof dec["get_registry"]>[0], CONSTRUCTOR<{}>>>()
+console.log(class_decorator.get_registry(Target).get()?.name);
