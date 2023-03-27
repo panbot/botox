@@ -7,23 +7,19 @@ class Options {
     constructor(
         public type: any,
     ) { }
-
-    static from_decorator(target: Object, property: MAYBE<PropertyKey>, index: number) {
-        return new Options(
-            Reflect.getMetadata('design:paramtypes', target, property as any)[index]
-        )
-    }
 }
 
 {
     type EXPECTED = CONSTRUCTOR<{}> | {};
 
     const parameter_decorator = decorator.create_parameter_decorator({
-        init_by: (t, p, i) => {
-            asserts.assert_true< IS<typeof t, EXPECTED> >();
-            asserts.assert_true< IS<typeof p, MAYBE<PropertyKey>> >();
-            asserts.assert_true< IS<typeof i, number> >();
-            return Options.from_decorator(t, p, i);
+        init_by: (target, property, index, type) => {
+            asserts.assert_true<IS< typeof target   , EXPECTED           >>();
+            asserts.assert_true<IS< typeof property , MAYBE<PropertyKey> >>();
+            asserts.assert_true<IS< typeof index    , number             >>();
+            asserts.assert_true<IS< typeof type     , any                >>();
+
+            return new Options(type);
         },
         target: decorator.target<{}>(),
     });
@@ -34,28 +30,47 @@ class Options {
 {
     type EXPECTED = {};
 
-    const instance_method_parameter_decorator = decorator.create_parameter_decorator.instance_method({
-        init_by: (t, p, i) => {
-            asserts.assert_true< IS<typeof t, EXPECTED> >();
-            asserts.assert_true< IS<typeof p, PropertyKey> >();
-            asserts.assert_true< IS<typeof i, number> >();
-            return Options.from_decorator(t, p, i);
+    const d = decorator.create_parameter_decorator.instance_method({
+        init_by: (target, property, index, type) => {
+            asserts.assert_true<IS< typeof target   , EXPECTED    >>();
+            asserts.assert_true<IS< typeof property , PropertyKey >>();
+            asserts.assert_true<IS< typeof index    , number      >>();
+            asserts.assert_true<IS< typeof type     , any         >>();
+
+            return new Options(type);
         },
         target: decorator.target<{}>(),
     });
-    type GET_REGISTRY_PARAMETERS = Parameters<typeof instance_method_parameter_decorator["get_registry"]>;
+    type GET_REGISTRY_PARAMETERS = Parameters<typeof d["get_registry"]>;
     asserts.assert_true< IS<GET_REGISTRY_PARAMETERS[0], EXPECTED> >();
+
+    class DummyTarget {
+        some_method(
+            @d()
+            some_param: string,
+        ) { }
+    }
+
+    let instance = new DummyTarget();
+    let registry = d.get_registry(instance, 'some_method');
+    let keys = Reflect.getMetadataKeys(instance, 'some_method');
+    console.log(keys);
+    console.log(registry.key == keys[3]);
+
+    console.log(registry.get());
 }
 
 {
     type EXPECTED = CONSTRUCTOR<{}>;
 
     const static_method_parameter_decorator = decorator.create_parameter_decorator.static_method({
-        init_by: (t, p, i) => {
-            asserts.assert_true< IS<typeof t, EXPECTED> >();
-            asserts.assert_true< IS<typeof p, PropertyKey> >();
-            asserts.assert_true< IS<typeof i, number> >();
-            return Options.from_decorator(t, p, i);
+        init_by: (target, property, index, type) => {
+            asserts.assert_true<IS< typeof target   , EXPECTED    >>();
+            asserts.assert_true<IS< typeof property , PropertyKey >>();
+            asserts.assert_true<IS< typeof index    , number      >>();
+            asserts.assert_true<IS< typeof type     , any         >>();
+
+            return new Options(type);
         },
         target: decorator.target<{}>(),
     });

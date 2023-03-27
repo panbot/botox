@@ -13,7 +13,34 @@ class Options {
 {
     type EXPECTED = CONSTRUCTOR<{}> | {};
 
-    const dec = decorator.create_property_decorator({
+    const dec = decorator.create_method_decorator({
+        init_by: (target, property, descriptor, type) => {
+            asserts.assert_true<IS< typeof target   , EXPECTED    >>();
+            asserts.assert_true<IS< typeof property , PropertyKey >>();
+            asserts.assert_true<IS< typeof type     , any         >>();
+            return new Options(type);
+        },
+        target: decorator.target<{}>(),
+    });
+    type GET_REGISTRY_PARAMETERS = Parameters<typeof dec["get_registry"]>;
+    asserts.assert_true< IS<GET_REGISTRY_PARAMETERS[0], EXPECTED> >();
+
+    class DummyTarget {
+        @dec()
+        some_instance_method() { }
+
+        @dec()
+        static some_static_method() { }
+    }
+
+    console.log(dec.get_registry(DummyTarget, 'some_static_method').get());
+    console.log(dec.get_registry(new DummyTarget, 'some_instance_method').get());
+}
+
+{
+    type EXPECTED = {};
+
+    const dec = decorator.create_method_decorator.instance({
         init_by: (target, property, descriptor, type) => {
             asserts.assert_true<IS< typeof target   , EXPECTED    >>();
             asserts.assert_true<IS< typeof property , PropertyKey >>();
@@ -29,7 +56,7 @@ class Options {
 {
     type EXPECTED = CONSTRUCTOR<{}>;
 
-    const dec = decorator.create_property_decorator.static({
+    const dec = decorator.create_method_decorator.static({
         init_by: (target, property, descriptor, type) => {
             asserts.assert_true<IS< typeof target   , EXPECTED    >>();
             asserts.assert_true<IS< typeof property , PropertyKey >>();
@@ -40,58 +67,4 @@ class Options {
     });
     type GET_REGISTRY_PARAMETERS = Parameters<typeof dec["get_registry"]>;
     asserts.assert_true< IS<GET_REGISTRY_PARAMETERS[0], EXPECTED> >();
-
-    class DummyTarget {
-        @dec()
-        static some_string_property: string;
-    }
-
-    console.log(dec.get_registry(DummyTarget, 'some_string_property').get_own());
-
-    let properties = dec.get_registry(DummyTarget, '').properties;
-    console.log(properties.get().has('some_string_property'));
-    properties.forEach((p, get, get_own) => {
-        console.log(p, get(), get_own());
-    });
-}
-
-{
-    type EXPECTED = {};
-
-    const dec = decorator.create_property_decorator.instance({
-        init_by: (target, property, descriptor, type) => {
-            asserts.assert_true<IS< typeof target   , EXPECTED    >>();
-            asserts.assert_true<IS< typeof property , PropertyKey >>();
-            asserts.assert_true<IS< typeof type     , any         >>();
-            return new Options(type);
-        },
-        target: decorator.target<{}>(),
-    });
-    type GET_REGISTRY_PARAMETERS = Parameters<typeof dec["get_registry"]>;
-    asserts.assert_true< IS<GET_REGISTRY_PARAMETERS[0], EXPECTED> >();
-
-    class DummyTarget {
-        @dec()
-        some_string_property!: string;
-    }
-
-    console.log(Reflect.getMetadataKeys(DummyTarget));
-    console.log(Reflect.getMetadataKeys(new DummyTarget(), 'some_string_property'));
-    console.log(Reflect.getMetadata('design:type', new DummyTarget(), 'some_string_property'));
-    let key = Reflect.getMetadataKeys(new DummyTarget(), 'some_string_property')[1];
-
-    {
-        let registry = dec.get_registry(new DummyTarget(), 'some_string_property');
-        console.log(registry.key === key);
-        console.log(registry.get_own());
-        console.log(registry.get());
-    }
-
-    {
-        let properties = dec.get_registry(new DummyTarget(), '').properties;
-        console.log(properties.get().has('some_string_property'));
-        properties.forEach((p, get, get_own) => {
-            console.log(p, get(), get_own());
-        });
-    }
 }

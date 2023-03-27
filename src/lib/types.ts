@@ -17,14 +17,14 @@ export type IS<X, Y> = (
 export type GET_HEAD<T> = T extends any[] ? T[0] : never;
 export type REMOVE_HEAD<T> = T extends [ any, ...infer U ] ? U : never;
 
-export function typram<T>() { return new typram.Param<T>() }
+export function typram<T>() { return new typram.Typram<T>() }
 export namespace typram {
 
     export function factory<CONSTRAINT = any>() {
-        return <T extends CONSTRAINT>() => new Param<T>
+        return <T extends CONSTRAINT>() => new Typram<T>
     }
 
-    export class Param<T> {
+    export class Typram<T> {
         // an impossible signature to match to avoid mistakes like:
         // let t: typram.Param<any> = typram<T>
         #t!: T

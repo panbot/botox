@@ -1,14 +1,16 @@
-import mrf, { Reflection } from "./metadata-registry-factory";
+import "reflect-metadata";
+import mrf, { Reflection, ReflectProperties } from "./metadata-registry-factory";
 import assert from "assert";
 import expandify from "./expandify";
-import { CONSTRUCTOR, GET_HEAD, IS, MAYBE, REMOVE_HEAD, typram } from "./types";
+import { CONSTRUCTOR, IS, MAYBE, REMOVE_HEAD, typram } from "./types";
 
 export type DECORATOR<D, T> = D & Required<{
     [ P in keyof NON_READONLY<T> ]: (v: T[P]) => DECORATOR<D, T>
 }>;
 
-type DECORATOR_ARGS<T extends DECORATOR_TYPE> = Parameters<DECORATORS[T]>
-type GET_TARGET_ARG<
+type DECORATOR_PARAMS<T extends DECORATOR_TYPE> = Parameters<DECORATORS[T]>
+type ACTUAL_DECORATOR_PARAMS<T extends DECORATOR_TYPE> = Parameters<ACTUAL_DECORATORS[T]>
+type GET_TARGET_PARAM<
     DT extends DECORATOR_TYPE,
     TARGET,
     TARGET_AS,
@@ -21,16 +23,16 @@ type GET_TARGET_ARG<
     : TARGET | CONSTRUCTOR<TARGET>
 ;
 
-type REPLACE_ARGS<
+type REPLACE_PARAMS<
     DT extends DECORATOR_TYPE,
     TARGET,
     PROPERTY,
 > = DT extends 'class'
     ? [ TARGET ]
-    : [ TARGET, PROPERTY, ...REMOVE_HEAD<REMOVE_HEAD<DECORATOR_ARGS<DT>>> ]
+    : [ TARGET, PROPERTY, ...REMOVE_HEAD<REMOVE_HEAD<ACTUAL_DECORATOR_PARAMS<DT>>> ]
 ;
-type REPLACE_GET_REGISTRY_ARGS<
-    TYPEOF_GET_REGISTRY extends (...args: any) => any,
+type REPLACE_GET_REGISTRY_PARAMS<
+    TYPEOF_GET_REGISTRY extends (...params: any) => any,
     TARGET,
     PROPERTY,
 > = Parameters<TYPEOF_GET_REGISTRY>["length"] extends 1
@@ -38,28 +40,33 @@ type REPLACE_GET_REGISTRY_ARGS<
     : [ TARGET, PROPERTY ]
 ;
 
+type INIT_BY_PARAMS<DT, PARAMS extends any[]> = DT extends "class" ? PARAMS : [ ...PARAMS, any ]
+
 const create = <
     DT extends DECORATOR_TYPE,
     TARGET_AS,
     PROPERTY,
 >(
     decorator_type: DT,
-    target_as: typram.Param<TARGET_AS>,
-    property: typram.Param<PROPERTY>,
+    target_as: typram.Typram<TARGET_AS>,
+    property: typram.Typram<PROPERTY>,
 ) => <
     FIELDS extends {},
     TARGET,
-    _TARGET = GET_TARGET_ARG<DT, TARGET, TARGET_AS>,
+    _TARGET = GET_TARGET_PARAM<DT, TARGET, TARGET_AS>,
 >(options: {
-    init_by: (...args: REPLACE_ARGS<DT, _TARGET, PROPERTY>) => FIELDS,
-    target?: typram.Param<TARGET>,
+    init_by: (...args: INIT_BY_PARAMS<DT, REPLACE_PARAMS<DT, _TARGET, PROPERTY>>) => FIELDS
+    target?: typram.Typram<TARGET>,
 }) => {
     let factory = (values?: Partial<FIELDS> | ( (fields: FIELDS) => void )) => {
         let works: ((o: FIELDS) => void)[] = [];
 
         return new Proxy(
-            (...args: DECORATOR_ARGS<DT>) => {
-                let fields = options.init_by(...args as any as REPLACE_ARGS<DT, _TARGET, PROPERTY>);
+            (...args: ACTUAL_DECORATOR_PARAMS<DT>) => {
+                let fields = options.init_by(...[
+                    ...args,
+                    parameter_type_getters[decorator_type](...args)
+                ] as any);
 
                 if (typeof values == 'function') values(fields);
                 else Object.assign(fields, values);
@@ -81,7 +88,7 @@ const create = <
 
     return expandify(factory)[expandify.expand]({
         get_registry: get_registry as any as (
-            ...args: REPLACE_GET_REGISTRY_ARGS<typeof get_registry, _TARGET, PROPERTY>
+            ...args: REPLACE_GET_REGISTRY_PARAMS<typeof get_registry, _TARGET, PROPERTY>
         ) => ReturnType<typeof get_registry>,
     })
 }
@@ -94,18 +101,31 @@ type DECORATORS = {
 };
 type DECORATOR_TYPE = keyof DECORATORS;
 
+// fix the default PropertyDecorator
+type ActualPropertyDecorator = (
+    target: Object,
+    propertyKey: string | symbol,
+    descriptor: MAYBE<PropertyDescriptor>,
+) => void;
+type ACTUAL_DECORATORS = {
+    class     :          ClassDecorator,
+    property  : ActualPropertyDecorator,
+    method    :         MethodDecorator,
+    parameter :      ParameterDecorator,
+};
+
 type REGISTRY_FACTORY_SIGNATURES<T> = {
     class     : (target: Object                        ) => Reflection<T>,
-    property  : (target: Object, property : PropertyKey) => Reflection<T>,
-    method    : (target: Object, property : PropertyKey) => Reflection<T>,
-    parameter : (target: Object, property?: PropertyKey) => Reflection<T[]>,
+    property  : (target: Object, property : PropertyKey) => Reflection<T>   & ReflectProperties<T>,
+    method    : (target: Object, property : PropertyKey) => Reflection<T>   & ReflectProperties<T>,
+    parameter : (target: Object, property?: PropertyKey) => Reflection<T[]> & ReflectProperties<T[]>,
 }
 
 function registry_factory<
     FIELDS,
     DT extends DECORATOR_TYPE
 >(
-    fields: typram.Param<FIELDS>,
+    fields: typram.Typram<FIELDS>,
     decorator_type: DT
 ): REGISTRY_FACTORY_SIGNATURES<FIELDS>[DT] {
     switch (decorator_type) {
@@ -135,7 +155,7 @@ function registry_factory<
 type SETTER<
     DT extends DECORATOR_TYPE,
 > = <T>(
-    args: DECORATOR_ARGS<DT>,
+    args: DECORATOR_PARAMS<DT>,
     get_registry: REGISTRY_FACTORY_SIGNATURES<T>[DT],
     value: T
 ) => void
@@ -143,10 +163,19 @@ type SETTER<
 const decorator_setters: {
     [ P in DECORATOR_TYPE ]: SETTER<P>
 } = {
-    'class'     : ( ([ t       ], gr, v) => gr(t   ).set(v)                ),
-    'property'  : ( ([ t, p    ], gr, v) => gr(t, p).set(v)                ),
-    'method'    : ( ([ t, p    ], gr, v) => gr(t, p).set(v)                ),
-    'parameter' : ( ([ t, p, i ], gr, v) => gr(t, p).get_or_set([])[i] = v ),
+    class     : ( ([ t       ], gr, v) => gr(t   ).set(v)                ),
+    property  : ( ([ t, p    ], gr, v) => gr(t, p).set(v)                ),
+    method    : ( ([ t, p    ], gr, v) => gr(t, p).set(v)                ),
+    parameter : ( ([ t, p, i ], gr, v) => gr(t, p).get_or_set([])[i] = v ),
+}
+
+const parameter_type_getters: {
+    [ P in DECORATOR_TYPE ]: (...args: ACTUAL_DECORATOR_PARAMS<P>) => any
+} = {
+    class     : (         ) => undefined,
+    property  : ( t, p    ) => Reflect.getMetadata('design:type'      , t, p),
+    method    : (         ) => undefined, // @TODO: get parameters and return types
+    parameter : ( t, p, i ) => Reflect.getMetadata('design:paramtypes', t, p)[i],
 }
 
 type IS_READONLY<T, K extends keyof T> = IS<

@@ -7,8 +7,9 @@ class Options {
 }
 
 const class_decorator = decorator.create_class_decorator({
-    init_by: t => {
-        asserts.assert_true<IS<typeof t, CONSTRUCTOR<{}>>>();
+    init_by: (target, ...args) => {
+        asserts.assert_true<IS<typeof target, CONSTRUCTOR<{}>>>();
+        asserts.assert_true<IS<typeof args  , []>>();
         return new Options();
     },
     target: decorator.target<{}>(),
