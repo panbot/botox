@@ -1,7 +1,6 @@
 import "reflect-metadata";
 import assert from 'assert';
-import mrf, { ReflectPropertiesImpl } from './metadata-registry-factory';
-import { MAYBE, typram } from './types';
+import mrf from './metadata-registry-factory';
 
 type POINTCUT = { target: any, method: PropertyKey, args: any[] }
 
@@ -53,81 +52,23 @@ export function aop_factory(
 
 export const destructive_aop = () => aop_factory(bp => bp.descriptor.value = apply(bp.advised, bp.origin));
 
-export const injective_aop_factory = (
-    inject: (prototype: Object, property: PropertyKey, factory: () => any) => Function,
-) => {
-    const key = mrf.key<ADVISED[]>();
-
-    return aop_factory(({
-        origin, advised, prototype, method,
-    }) => {
-        let registry = mrf.property_factory(key)(prototype, method)
-        registry.get_or_set([]).push(advised);
-
-        inject(
-            prototype,
-            method,
-            () => registry.get_own()!.reduce((pv, cv) => apply(cv, pv), origin),
-        );
-    })
-}
-
 export const proxitive_aop = (
     use: (proxifier: (object: any) => any) => any,
 ) => {
-    let get_registry = prototype_property_factory(mrf.key<ADVISED[]>());
+    let get_registry = mrf.property_factory(mrf.key<ADVISED[]>(), (t, p) => t[p]);
 
     use((target: any) => {
         let proxy = Object.create(target);
 
-        get_registry(target, '').properties.forEach(
-            (p, gr) => {
-                console.log(target, p);
-                let keys = Reflect.getMetadataKeys(target);
-                console.log(keys);
-                console.log(Reflect.getMetadata(keys[0], target));
-                console.log(Reflect.getMetadataKeys(target[p!]));
-                console.log(Reflect.getOwnMetadata(Reflect.getMetadataKeys(target[p!])[0], target[p!]));
-                console.log(gr().get());
-                proxy[p!] = gr().get().reduce((pv, cv) => apply(cv, pv), target[p!])
-            }
+        get_registry(target).properties.for_each(
+            (p, gr) => proxy[p!] = gr().get().reduce((pv, cv) => apply(cv, pv), target[p!])
         );
 
         return proxy;
     });
 
-    return aop_factory(({
-        advised, prototype, method,
-    }) => {
-        get_registry(prototype, method).get_or_set([]).push(advised);
-    })
+    return aop_factory(p => get_registry(p.prototype, p.method).get_or_set([]).push(p.advised));
 }
-
-const prototype_property_factory = <T>(key: typram.Typram<T>) => (
-    target: Object, property: PropertyKey
-) => new PrototypePropertyRegistry(key, target, property)
-
-class PrototypePropertyRegistry<T> extends ReflectPropertiesImpl<T> {
-
-    constructor(
-        key: typram.Typram<T>,
-        target: any,
-        property: PropertyKey,
-    ) {
-        super(key, target, property);
-    }
-
-    override get()     : MAYBE<T> { return this.get_own() }
-    override get_own() : MAYBE<T> {
-        console.log(this.target, this.property);
-        return Reflect.getOwnMetadata(this.key, this.target[this.property]) }
-
-    override set(value: T) {
-        Reflect.defineMetadata(this.key, value, this.target[this.property])
-        this.properties.add(this.property);
-    }
-}
-
 
 function assert_is_function(o: any, k: PropertyKey) {
     let v: unknown = o[k];

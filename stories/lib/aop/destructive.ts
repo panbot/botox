@@ -1,10 +1,10 @@
 import { destructive_aop } from '@/lib/aop';
 
-const { Before, After, Around } = destructive_aop();
+const { before, after, around } = destructive_aop();
 
 class Target {
 
-    @Before(pc => {
+    @before(pc => {
         console.log('before', pc);
         console.log('original arguments', pc.args);
         pc.args = pc.args.map(v => v += '(touched by before advisor)')
@@ -14,7 +14,7 @@ class Target {
         console.log('final arguments', args);
     }
 
-    @After(pc => {
+    @after(pc => {
         console.log('after', pc);
         return 2;
     })
@@ -25,7 +25,7 @@ class Target {
         return ret;
     }
 
-    @Around(pc => {
+    @around(pc => {
         console.log('before test around', pc);
         pc.args = pc.args.map(v => `${v} (arg adviced)`);
         let result = pc.invoke();

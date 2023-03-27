@@ -5,7 +5,9 @@ type Key<T = unknown> = typram.Typram<T>;
 const key = typram.factory<any>();
 
 export interface Reflection<T> {
-    readonly key: Key<T>;
+    readonly key: Key<T>
+    readonly target: any
+    readonly property: any
     get(): MAYBE<T>
     get_own(): MAYBE<T>
     set(value: T): void
@@ -18,26 +20,40 @@ export interface ReflectionOptimisticGet<T> extends Reflection<T> {
 }
 
 export interface ReflectProperties<T> {
-    readonly properties: Omit<Properties<T>, 'add'>;
+    readonly properties: Omit<Properties<T>, 'add'>
 }
+
+type Scheme = (target: any, property: any) => [ any, any ]
 
 class ReflectionImpl<T> implements Reflection<T> {
 
     #key: Key<T>;
     get key() { return this.#key }
 
+    #target: any;
+    get target() { return this.#target }
+
+    #property: any;
+    get property() { return this.#property }
+
+    protected scheme: Scheme = (t, p) => [ t, p ];
+
     constructor(
         key: Key<T>,
-        public target: any,
-        public property: any,
+        target: any,
+        property: any,
+        scheme?: Scheme,
     ) {
         this.#key = key;
+        this.#target = target;
+        this.#property = property;
+
+        if (scheme) this.scheme = scheme;
     }
 
-    get()     : MAYBE<T> { return Reflect.getMetadata   (this.key, this.target, this.property) }
-    get_own() : MAYBE<T> { return Reflect.getOwnMetadata(this.key, this.target, this.property) }
-
-    set(value: T) { Reflect.defineMetadata(this.key, value, this.target, this.property) }
+    get()     : MAYBE<T> { return Reflect.getMetadata   (this.key,    ...this.scheme(this.target, this.property)) }
+    get_own() : MAYBE<T> { return Reflect.getOwnMetadata(this.key,    ...this.scheme(this.target, this.property)) }
+    set(v: T) : void     {        Reflect.defineMetadata(this.key, v, ...this.scheme(this.target, this.property)) }
 
     get_or_set(v: T) {
         let w = this.get_own();
@@ -49,7 +65,7 @@ class ReflectionImpl<T> implements Reflection<T> {
 
     parent() {
         let t = Reflect.getPrototypeOf(this.target);
-        if (t) return new ReflectionImpl<T>(this.key, t, this.property);
+        if (t) return new ReflectionImpl<T>(this.key, t, this.property, this.scheme);
     }
 
     trace() {
@@ -68,6 +84,13 @@ class ReflectionImpl<T> implements Reflection<T> {
 }
 
 class ClassRegistry<T> extends ReflectionImpl<T> {
+    constructor(
+        key: Key<T>,
+        target: any,
+        scheme?: Scheme,
+    ) {
+        super(key, target, undefined, scheme);
+    }
 }
 
 export abstract class ReflectPropertiesImpl<T> extends ReflectionImpl<T> implements ReflectProperties<T> {
@@ -75,7 +98,7 @@ export abstract class ReflectPropertiesImpl<T> extends ReflectionImpl<T> impleme
     #properties?: Properties<T>;
 
     get properties() {
-        this.#properties = create_property_bag(this.key, this.target);
+        this.#properties = create_property_bag(this.key, this.target, this.scheme);
         Reflect.defineProperty(this, 'properties', { get() { return this.#properties } });
         return this.#properties;
     }
@@ -87,8 +110,9 @@ class PropertyRegistry<T> extends ReflectPropertiesImpl<T> {
         key: Key<T>,
         target: any,
         property: MAYBE<PropertyKey>,
+        scheme?: Scheme,
     ) {
-        super(key, target, property);
+        super(key, target, property, scheme);
     }
 
     override set(value: T) {
@@ -97,26 +121,26 @@ class PropertyRegistry<T> extends ReflectPropertiesImpl<T> {
     }
 }
 
-type Properties<T> = {
+interface Properties<T> {
     add(property: MAYBE<PropertyKey>): void
-    get: () => Set<MAYBE<PropertyKey>>
-    forEach(
+    get(): Set<MAYBE<PropertyKey>>
+    for_each(
         cb: (
             property: MAYBE<PropertyKey>,
             get_registry: () => ReflectionOptimisticGet<T>,
         ) => void
     ): void
 }
-function create_property_bag<T>(key: Key<T>, target: any) {
+function create_property_bag<T>(key: Key<T>, target: any, scheme?: Scheme) {
     let new_key = create_property_bag.map.for(key);
 
-    let reflection = new ReflectionImpl(new_key, target, undefined);
+    let reflection = new ReflectionImpl(new_key, target, undefined, scheme);
     return {
         add: p => reflection.get_or_set([]).push(p),
         get: () => new Set(reflection.trace().flat()),
-        forEach(cb) {
+        for_each(cb) {
             for (let p of this.get()) {
-                cb(p, () => new ReflectionImpl<T>(key, target, p) as any)
+                cb(p, () => new ReflectionImpl<T>(key, target, p, scheme) as any)
             }
         }
     } satisfies Properties<T>;
@@ -143,11 +167,12 @@ export default {
 
     key,
 
-    class_factory: <T>(key: Key<T>) => (
-        target: Object
+    class_factory: <T>(key: Key<T>, scheme?: Scheme) => (
+        target: Object,
     ) => new ClassRegistry<T>(key, target, undefined),
 
-    property_factory: <T>(key: Key<T>) => (
-        target: Object, property?: PropertyKey
+    property_factory: <T>(key: Key<T>, scheme?: Scheme) => (
+        target: Object,
+        property?: PropertyKey,
     ) => new PropertyRegistry(key, target, property),
 }
