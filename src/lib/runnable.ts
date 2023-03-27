@@ -6,32 +6,32 @@ export interface Runnable<T = unknown> {
 }
 
 export interface RunArgFactory<RunArg = unknown> {
-    produceRunArgFor(r: Runnable, ...args: any): Promise<RunArg>;
-    releaseRunArgFor?(r: Runnable): Promise<void>;
-    aroundRun?<T>(run: () => Promise<T>, r: Runnable<T>): Promise<T>;
+    produce_run_arg (for_runnable: Runnable, ...args: any): Promise<RunArg>;
+    release_run_arg?(for_runnable: Runnable): Promise<void>;
+    around_run?<T>(for_runnable: Runnable<T>, run: () => Promise<T>): Promise<T>;
 }
 
-type RunArgProducerArgs<T extends RunArgFactory> = REMOVE_HEAD<Parameters<T['produceRunArgFor']>>;
+type GET_PRODUCER_ARGS<T extends RunArgFactory> = REMOVE_HEAD<Parameters<T['produce_run_arg']>>;
 
-type RunArgMetadata<T extends RunArgFactory = RunArgFactory> = {
+type RUN_ARG<T extends RunArgFactory = RunArgFactory> = {
     index: number,
     Factory: CONSTRUCTOR<T>,
-    args: RunArgProducerArgs<T>,
+    args: GET_PRODUCER_ARGS<T>,
 };
 
-type Arounder = REQUIRED_KEY<RunArgFactory, "aroundRun">;
-function factoryIsArounder(factory: RunArgFactory): factory is Arounder {
-    return factory.aroundRun != null;
+type Arounder = REQUIRED_KEY<RunArgFactory, "around_run">;
+function is_arounder(factory: RunArgFactory): factory is Arounder {
+    return factory.around_run != null;
 }
 
 export default function (
     instantiate: INSTANTIATOR,
 ) {
-    const reg = mr<RunArgMetadata[]>()('property');
+    const reg = mr<RUN_ARG[]>()('property');
 
-    const RunArg = <T extends RunArgFactory>(
+    const run_arg = <T extends RunArgFactory>(
         Factory: CONSTRUCTOR<T>,
-        ...args: RunArgProducerArgs<T>
+        ...args: GET_PRODUCER_ARGS<T>
     ) => <U>(
         proto: Runnable<U>,
         method: string,
@@ -48,9 +48,9 @@ export default function (
 
         let args: any[] = [];
         let produce = async <U, T extends RunArgFactory<U>>(
-            producer: RunArgMetadata<T>,
+            producer: RUN_ARG<T>,
             factory: T
-        ) => args[producer.index] = await factory.produceRunArgFor(
+        ) => args[producer.index] = await factory.produce_run_arg(
             runnable,
             ...producer.args
         );
@@ -60,7 +60,7 @@ export default function (
 
         let arounders: Arounder[] = [];
         let around = (f: () => Promise<T>) => arounders.reduce(
-            (pv, cv) => () => cv.aroundRun(pv, runnable),
+            (pv, cv) => () => cv.around_run(runnable, pv),
             f,
         )
 
@@ -68,9 +68,9 @@ export default function (
             let factory = instantiate(producer.Factory);
             producing.push(produce(producer, factory));
 
-            releasing.push(() => factory.releaseRunArgFor?.(runnable));
+            releasing.push(() => factory.release_run_arg?.(runnable));
 
-            if (factoryIsArounder(factory)) arounders.push(factory);
+            if (is_arounder(factory)) arounders.push(factory);
         }
 
         try {
@@ -89,6 +89,6 @@ export default function (
 
     return {
         run,
-        RunArg,
+        run_arg,
     }
 }

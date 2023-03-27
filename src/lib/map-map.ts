@@ -1,18 +1,18 @@
-import { RemoveTail } from "./types";
+import { REMOVE_TAIL } from "./types";
 
-export class MapMap<Keys extends any[], Value> {
+export class MapMap<KEYS extends any[], VALUE> {
 
     map = new Map<any, any>();
 
-    get(...keys: Keys): Value {
+    get(...keys: KEYS): VALUE {
         let key = keys.pop();
-        let map = this.getMap(keys as unknown as RemoveTail<Keys>);
+        let map = this.get_map(keys as unknown as REMOVE_TAIL<KEYS>);
         return map?.get(key);
     }
 
-    set(...args: [ ...Keys, Value ]) {
-        let value = args.pop() as Value;
-        let keys = args as unknown as Keys;
+    set(...args: [ ...KEYS, VALUE ]) {
+        let value = args.pop() as VALUE;
+        let keys = args as unknown as KEYS;
 
         let map = this.map;
         while (keys.length > 1) {
@@ -29,7 +29,7 @@ export class MapMap<Keys extends any[], Value> {
         return this;
     }
 
-    getMap(keys: RemoveTail<Keys>) {
+    get_map(keys: REMOVE_TAIL<KEYS>) {
         let map = this.map;
         while (keys.length) {
             let key = keys.shift();
