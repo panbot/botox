@@ -1,102 +1,136 @@
+import "reflect-metadata";
 import assert from 'assert';
-import mr from './metadata-registry';
+import mrf, { ReflectPropertiesImpl } from './metadata-registry-factory';
+import { MAYBE, typram } from './types';
 
-type Pointcut = { target: any, method: PropertyKey, args: any[] }
+type POINTCUT = { target: any, method: PropertyKey, args: any[] }
 
-type BeforePointcut = Pointcut
-type AfterPointcut  = Pointcut & { result: any }
-type AroundPointcut = Pointcut & { invoke: () => any }
+type BEFORE_POINTCUT = POINTCUT
+type AFTER_POINTCUT  = POINTCUT & { result: any }
+type AROUND_POINTCUT = POINTCUT & { invoke: () => any }
 
-type Before = ( before: (pointcut: BeforePointcut) => any ) => MethodDecorator
-type  After = (  after: (pointcut:  AfterPointcut) => any ) => MethodDecorator
-type Around = ( around: (pointcut: AroundPointcut) => any ) => MethodDecorator
+type BEFORE = ( before: (pointcut: BEFORE_POINTCUT) => any ) => MethodDecorator
+type  AFTER = (  after: (pointcut:  AFTER_POINTCUT) => any ) => MethodDecorator
+type AROUND = ( around: (pointcut: AROUND_POINTCUT) => any ) => MethodDecorator
 
-type Advised = <T>(invoke: (p: Pointcut) => T, target: any, args: any[]) => T
+type ADVISED = <T>(invoke: (p: POINTCUT) => T, target: any, args: any[]) => T
 const apply = (
-    advised: Advised,
+    advised: ADVISED,
     to: Function
 ) => function (this: any, ...args: any[]) {
     return advised(p => to.apply(this, p.args), this, args);
 }
 
-export function AopFactory(
+export function aop_factory(
     implement: (blueprint: {
         origin     : Function,
-        advised    : Advised,
+        advised    : ADVISED,
         prototype  : Object,
         method     : PropertyKey,
         descriptor : PropertyDescriptor,
     }) => void,
 ) {
     const create: (
-        shape: (p: Pointcut, invoke: (p: Pointcut) => any) => any
+        shape: (p: POINTCUT, invoke: (p: POINTCUT) => any) => any
     ) => MethodDecorator = (
-        pattern,
+        shape,
     ) => (
         prototype, method, descriptor
     ) => void implement({
-        origin: assertIsFunction(prototype, method),
-        advised: (invoke, target, args) => pattern({ target, method, args }, invoke),
+        origin: assert_is_function(prototype, method),
+        advised: (invoke, target, args) => shape({ target, method, args }, invoke),
         prototype, method, descriptor,
     });
 
-    const Before : Before = before => create((p, invoke) =>       (  before(p),               invoke(p)  ));
-    const  After :  After =  after => create((p, invoke) =>  after({     ...p,        result: invoke(p) }));
-    const Around : Around = around => create((p, invoke) => around({     ...p,  invoke: () => invoke(p) }));
+    const extend = Object.assign;
 
-    return { Before, After, Around }
+    return {
+        before : before => create((p, invoke) =>       ( before(p),                 invoke(p)    )),
+        after  : after  => create((p, invoke) =>  after( extend(p , { result:       invoke(p) }) )),
+        around : around => create((p, invoke) => around( extend(p , { invoke: () => invoke(p) }) )),
+    } satisfies { before: BEFORE, after: AFTER, around: AROUND }
 }
 
-export const DestructiveAop = () => AopFactory(bp => bp.descriptor.value = apply(bp.advised, bp.origin));
+export const destructive_aop = () => aop_factory(bp => bp.descriptor.value = apply(bp.advised, bp.origin));
 
-export const InjectiveAopFactory = (
+export const injective_aop_factory = (
     inject: (prototype: Object, property: PropertyKey, factory: () => any) => Function,
-) => AopFactory(({
-    origin, advised, prototype, method,
-}) => {
-    let registry = mr<Advised[]>(InjectiveAopFactory)('property')(prototype, method);
-    registry.getOrSet([]).push(advised);
+) => {
+    const key = mrf.key<ADVISED[]>();
 
-    inject(
-        prototype,
-        method,
-        () => registry.getOwn()!.reduce((pv, cv) => apply(cv, pv), origin),
-    );
-});
+    return aop_factory(({
+        origin, advised, prototype, method,
+    }) => {
+        let registry = mrf.property_factory(key)(prototype, method)
+        registry.get_or_set([]).push(advised);
 
-export const ProxitiveAop = (
+        inject(
+            prototype,
+            method,
+            () => registry.get_own()!.reduce((pv, cv) => apply(cv, pv), origin),
+        );
+    })
+}
+
+export const proxitive_aop = (
     use: (proxifier: (object: any) => any) => any,
 ) => {
-    let p = mr<PropertyKey[]>()('class'   );
-    let a = mr<    Advised[]>()('property');
+    let get_registry = prototype_property_factory(mrf.key<ADVISED[]>());
 
     use((target: any) => {
-        let properties = p(target).trace().flat();
-        if (!properties.length) return target;
-
         let proxy = Object.create(target);
-        let pointcuts = new Map<PropertyKey, Advised[]>();
-        for (let property of new Set(properties)) {
-            pointcuts.set(property, a(target, property).getOwn()!);
-        }
 
-        for (let [ k, v ] of pointcuts.entries()) {
-            proxy[k] = v.reduce((pv, cv) => apply(cv, pv), target[k] as Function);
-        }
+        get_registry(target, '').properties.forEach(
+            (p, gr) => {
+                console.log(target, p);
+                let keys = Reflect.getMetadataKeys(target);
+                console.log(keys);
+                console.log(Reflect.getMetadata(keys[0], target));
+                console.log(Reflect.getMetadataKeys(target[p!]));
+                console.log(Reflect.getOwnMetadata(Reflect.getMetadataKeys(target[p!])[0], target[p!]));
+                console.log(gr().get());
+                proxy[p!] = gr().get().reduce((pv, cv) => apply(cv, pv), target[p!])
+            }
+        );
 
         return proxy;
     });
 
-    return AopFactory(({
+    return aop_factory(({
         advised, prototype, method,
     }) => {
-        a(prototype, method).getOrSet([]).push(advised);
-        p(prototype        ).getOrSet([]).push(method );
+        get_registry(prototype, method).get_or_set([]).push(advised);
     })
 }
 
-function assertIsFunction(o: any, k: PropertyKey) {
+const prototype_property_factory = <T>(key: typram.Typram<T>) => (
+    target: Object, property: PropertyKey
+) => new PrototypePropertyRegistry(key, target, property)
+
+class PrototypePropertyRegistry<T> extends ReflectPropertiesImpl<T> {
+
+    constructor(
+        key: typram.Typram<T>,
+        target: any,
+        property: PropertyKey,
+    ) {
+        super(key, target, property);
+    }
+
+    override get()     : MAYBE<T> { return this.get_own() }
+    override get_own() : MAYBE<T> {
+        console.log(this.target, this.property);
+        return Reflect.getOwnMetadata(this.key, this.target[this.property]) }
+
+    override set(value: T) {
+        Reflect.defineMetadata(this.key, value, this.target[this.property])
+        this.properties.add(this.property);
+    }
+}
+
+
+function assert_is_function(o: any, k: PropertyKey) {
     let v: unknown = o[k];
-    assert(typeof v == 'function', `${o.constructor.name}.${k.toString()} is not a function`)
+    assert(typeof v == 'function', `${o.constructor.name}.${k.toString()} is not a function`);
     return v;
 }
