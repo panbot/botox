@@ -3,26 +3,27 @@ import expandify from "../lib/expandify";
 import { Runnable } from "../lib/runnable";
 import { CONSTRUCTOR } from "../lib/types";
 
-export type ModuleOptions<Module extends {}> = {
+export type ModuleOptions<MODULE extends {}> = {
     name: string,
     controllers?: CONSTRUCTOR<any>[],
     apis?: Runnable<any>,
-    dependencies?: () => CONSTRUCTOR<Module>[],
+    dependencies?: () => CONSTRUCTOR<MODULE>[],
 }
 
-export default <Module extends {}>() => expandify(decorator('class')<Module>()(
-    target => ({ name: target.name } as ModuleOptions<Module>)
-))[expandify.expand](d => ({
+export default <MODULE extends {}>() => decorator.create_class_decorator({
+    init_by: target => ({ name: target.name } as ModuleOptions<MODULE>),
+    target: decorator.target<MODULE>(),
+})[expandify.expand]({
 
-    getOptions(module: CONSTRUCTOR<Module>) {
-        return d.getRegistry(module).getOwn()
+    get_options(module: CONSTRUCTOR<MODULE>) {
+        return this.get_registry(module).get_own()
     },
 
-    resolveDependencies(modules: CONSTRUCTOR<Module>[]) {
-        let visited = new Set<CONSTRUCTOR<Module>>();
+    resolve_dependencies(modules: CONSTRUCTOR<MODULE>[]) {
+        let visited = new Set<CONSTRUCTOR<MODULE>>();
         const visit = (
-            module: CONSTRUCTOR<Module>,
-            path = new Set<CONSTRUCTOR<Module>>()
+            module: CONSTRUCTOR<MODULE>,
+            path = new Set<CONSTRUCTOR<MODULE>>()
         ) => {
             if (visited.has(module)) return;
 
@@ -31,21 +32,20 @@ export default <Module extends {}>() => expandify(decorator('class')<Module>()(
             }});
             path.add(module);
 
-            let options = this.getOptions(module);
+            let options = this.get_options(module);
             if (!options) throw new Error(`module options not found`, { cause: { module } });
             options.dependencies?.().forEach(
-                dep => visit(dep, new Set<CONSTRUCTOR<Module>>(path))
+                dep => visit(dep, new Set<CONSTRUCTOR<MODULE>>(path))
             );
 
             sorted.push(module);
             visited.add(module);
         }
 
-        let sorted: CONSTRUCTOR<Module>[] = [];
+        let sorted: CONSTRUCTOR<MODULE>[] = [];
 
         modules.forEach(m => visit(m));
 
         return sorted;
-    },
-
-}))
+    }
+})
