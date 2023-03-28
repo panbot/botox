@@ -1,9 +1,11 @@
-import di from '@/lib/dependency-injection';
-import { proxitive_aop } from '@/lib/aop';
+import aop from '@/lib/aop/proxitive';
+import { CONSTRUCTOR } from '@/lib/types';
 
-const Container = di();
-
-export const { before, after, around } = proxitive_aop(proxifier => Container.on('instantiated', proxifier));
+let proxify: any;
+export const { before, after, around } = aop(p => proxify = p);
+function instantiate<T>(ctor: CONSTRUCTOR<T>) {
+    return proxify(new ctor);
+}
 
 class Base {
     @before(pc => {
@@ -28,16 +30,16 @@ class SubSub extends Sub {
 }
 
 {
-    let instance = Container.instantiate(Base);
+    let instance = instantiate(Base);
     instance.test_before();
 }
 
 {
-    let instance = Container.instantiate(Sub);
+    let instance = instantiate(Sub);
     instance.test_before();
 }
 
 {
-    let instance = Container.instantiate(SubSub);
+    let instance = instantiate(SubSub);
     instance.test_before();
 }

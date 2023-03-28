@@ -1,178 +1,155 @@
 import "reflect-metadata";
 import { MAYBE, typram } from "./types";
+import aop from './aop/injective';
 
-type Key<T = unknown> = typram.Typram<T>;
+type KEY<T = unknown> = typram.Typram<T>;
 const key = typram.factory<any>();
 
 export interface Reflection<T> {
-    readonly key: Key<T>
-    readonly target: any
-    readonly property: any
+    readonly key: KEY<T>
+    readonly target: Object
+    readonly property: MAYBE<PropertyKey>
     get(): MAYBE<T>
     get_own(): MAYBE<T>
     set(value: T): void
     get_or_set(v: T): T
-    trace(): T[]
 }
 
-export interface ReflectionOptimisticGet<T> extends Reflection<T> {
-    get(): T
-}
+type SCHEME = (target: any, property?: any) => [ t: any, p?: any ]
 
-export interface ReflectProperties<T> {
-    readonly properties: Omit<Properties<T>, 'add'>
-}
+namespace inventory {
 
-type Scheme = (target: any, property: any) => [ any, any ]
+    export const property_key = Symbol();
 
-class ReflectionImpl<T> implements Reflection<T> {
+    export const add_property = (
+        key: KEY<any>, target: Object, p: MAYBE<PropertyKey>
+    ) => factory(key as KEY<MAYBE<PropertyKey>[]>, target, property_key).get_or_set([]).push(p);
 
-    #key: Key<T>;
-    get key() { return this.#key }
+    export const get_properties = (key: KEY, target: Object) => {
+        let set = new Set<MAYBE<PropertyKey>>();
 
-    #target: any;
-    get target() { return this.#target }
-
-    #property: any;
-    get property() { return this.#property }
-
-    protected scheme: Scheme = (t, p) => [ t, p ];
-
-    constructor(
-        key: Key<T>,
-        target: any,
-        property: any,
-        scheme?: Scheme,
-    ) {
-        this.#key = key;
-        this.#target = target;
-        this.#property = property;
-
-        if (scheme) this.scheme = scheme;
-    }
-
-    get()     : MAYBE<T> { return Reflect.getMetadata   (this.key,    ...this.scheme(this.target, this.property)) }
-    get_own() : MAYBE<T> { return Reflect.getOwnMetadata(this.key,    ...this.scheme(this.target, this.property)) }
-    set(v: T) : void     {        Reflect.defineMetadata(this.key, v, ...this.scheme(this.target, this.property)) }
-
-    get_or_set(v: T) {
-        let w = this.get_own();
-        if (w != null) return w;
-
-        this.set(v);
-        return v;
-    }
-
-    parent() {
-        let t = Reflect.getPrototypeOf(this.target);
-        if (t) return new ReflectionImpl<T>(this.key, t, this.property, this.scheme);
-    }
-
-    trace() {
-        let list: T[] = [];
         for (
-            let refl: MAYBE<ReflectionImpl<T>> = this;
-            refl;
-            refl = refl.parent()
-        ) {
-            let v = refl.get_own();
-            if (v != null) list.push(v);
-        }
+            let o: MAYBE<Object> = target;
+            o;
+            o = Reflect.getPrototypeOf(o)
+        ) factory(
+            key as KEY<MAYBE<PropertyKey>[]>,
+            o,
+            property_key
+        ).get()?.forEach(
+            v => set.add(v)
+        );
 
-        return list;
+        return set;
     }
-}
 
-class ClassRegistry<T> extends ReflectionImpl<T> {
-    constructor(
-        key: Key<T>,
-        target: any,
-        scheme?: Scheme,
-    ) {
-        super(key, target, undefined, scheme);
-    }
-}
-
-export abstract class ReflectPropertiesImpl<T> extends ReflectionImpl<T> implements ReflectProperties<T> {
-
-    #properties?: Properties<T>;
-
-    get properties() {
-        this.#properties = create_property_bag(this.key, this.target, this.scheme);
-        Reflect.defineProperty(this, 'properties', { get() { return this.#properties } });
-        return this.#properties;
-    }
-}
-
-class PropertyRegistry<T> extends ReflectPropertiesImpl<T> {
-
-    constructor(
-        key: Key<T>,
-        target: any,
+    export type PROPERTY_CALLBACK<T> = (
         property: MAYBE<PropertyKey>,
-        scheme?: Scheme,
-    ) {
-        super(key, target, property, scheme);
-    }
-
-    override set(value: T) {
-        super.set(value);
-        this.properties.add(this.property);
-    }
+        registry_factory: () => Reflection<T>,
+    ) => void
+    export const for_each_property = <T>(
+        key: KEY<T>,
+        target: Object,
+        callback: PROPERTY_CALLBACK<T>,
+        scheme?: SCHEME,
+    ) => get_properties(
+        key, target
+    ).forEach(
+        p => callback(p, () => factory(key, target, p, scheme) as any)
+    );
 }
 
-interface Properties<T> {
-    add(property: MAYBE<PropertyKey>): void
-    get(): Set<MAYBE<PropertyKey>>
-    for_each(
-        cb: (
-            property: MAYBE<PropertyKey>,
-            get_registry: () => ReflectionOptimisticGet<T>,
-        ) => void
-    ): void
-}
-function create_property_bag<T>(key: Key<T>, target: any, scheme?: Scheme) {
-    let new_key = create_property_bag.map.for(key);
-
-    let reflection = new ReflectionImpl(new_key, target, undefined, scheme);
+const factory = <T>(
+    key: KEY<T>,
+    target: Object,
+    property: MAYBE<PropertyKey>,
+    scheme: SCHEME = (t, p) => [ t, p ],
+) => {
     return {
-        add: p => reflection.get_or_set([]).push(p),
-        get: () => new Set(reflection.trace().flat()),
-        for_each(cb) {
-            for (let p of this.get()) {
-                cb(p, () => new ReflectionImpl<T>(key, target, p, scheme) as any)
-            }
-        }
-    } satisfies Properties<T>;
-}
-namespace create_property_bag {
-    export const map = create_key_map<MAYBE<PropertyKey>[]>();
+        get      key() { return key      },
+        get   target() { return target   },
+        get property() { return property },
+
+        get:     () => Reflect.getMetadata   (key,    ...scheme(target, property)) as MAYBE<T>,
+        get_own: () => Reflect.getOwnMetadata(key,    ...scheme(target, property)) as MAYBE<T>,
+        set: (v: T) => Reflect.defineMetadata(key, v, ...scheme(target, property)),
+
+        get_or_set(v: T) {
+            let u = this.get_own();
+            if (u != null) return u;
+
+            this.set(v);
+            return v;
+        },
+    } satisfies Reflection<T>
 }
 
-function create_key_map<T>() {
-    let map = new WeakMap<Key, Key>();
-    return Object.assign(map, {
-        for(from: Key) {
-            let to = map.get(from) as MAYBE<Key<T>>;
-            if (to) return to;
+const class_factory = <T>(
+    key: KEY<T>,
+    scheme?: (target: Object) => [ t: Object, p?: PropertyKey ],
+) => (
+    target: Object,
+) => factory(key, target, undefined, scheme);
 
-            to = key();
-            map.set(from, to);
-            return to;
-        }
-    })
+const property_factory = <T>(
+    key: KEY<T>,
+    scheme?: (target: Object, property: PropertyKey) => [ t: Object, p?: PropertyKey ],
+) => (
+    target: Object,
+    property: PropertyKey,
+) => factory(key, target, property, scheme);
+
+
+const inventory_factory = <T>(
+    key: KEY<T>,
+    scheme?: (target: Object, property: PropertyKey) => [ t: Object, p?: PropertyKey ],
+) => {
+    let get_registry = (
+        target: Object,
+        property: PropertyKey,
+    ) => {
+        let registry = factory(key, target, property, scheme);
+        before(registry, "set", () => inventory.add_property(key, target, property));
+        return registry;
+    }
+
+    return Object.assign(get_registry, {
+
+        get_properties: (
+            target: Object,
+        ) => inventory.get_properties(key, target),
+
+        for_each_property: (
+            target: Object,
+            callback: inventory.PROPERTY_CALLBACK<T>,
+        ) => inventory.for_each_property(key, target, callback, scheme),
+    });
 }
+
+const factory_factory = <
+    ARGS extends [ target: Object, property?: PropertyKey ],
+>(
+    args: typram.Typram<ARGS>
+) => {
+    return <T>(
+        key: KEY<T>,
+        scheme?: (...args: ARGS) => [ t: Object, p?: PropertyKey ],
+    ) => (...args: ARGS) => factory(key, args[0], args[1], scheme as SCHEME);
+}
+
+const f1 = factory_factory(typram<[ target: Object ]>());
+const f2 = factory_factory(typram<[ target: Object, property: PropertyKey ]>());
+
+const { before } = aop();
 
 export default {
 
     key,
 
-    class_factory: <T>(key: Key<T>, scheme?: Scheme) => (
-        target: Object,
-    ) => new ClassRegistry<T>(key, target, undefined),
+    factory,
+    class_factory,
+    property_factory,
+    inventory_factory,
+    // optional_property_factory,
 
-    property_factory: <T>(key: Key<T>, scheme?: Scheme) => (
-        target: Object,
-        property?: PropertyKey,
-    ) => new PropertyRegistry(key, target, property),
 }

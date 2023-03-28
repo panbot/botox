@@ -2,7 +2,7 @@ export type CONSTRUCTOR<T> = new (...args: any[]) => T
 
 export type INSTANTIATOR = <T>(type: CONSTRUCTOR<T>) => T
 
-export type MAYBE<T> = T | undefined;
+export type MAYBE<T> = T | undefined | null;
 
 export type REQUIRED_KEY<T, K extends keyof T> = {
     [P in K]-?: T[P];

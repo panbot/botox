@@ -1,14 +1,17 @@
 import { CONSTRUCTOR, INSTANTIATOR, REMOVE_HEAD, REQUIRED_KEY } from "./types";
-import mr from './metadata-registry';
+import mrf from './metadata-registry-factory';
 
 export interface Runnable<T = unknown> {
     run(...args: any[]): Promise<T>;
 }
 
 export interface RunArgFactory<RunArg = unknown> {
-    produce_run_arg (for_runnable: Runnable, ...args: any): Promise<RunArg>;
+
+    produce_run_arg(for_runnable: Runnable, ...args: any): Promise<RunArg>;
+
     release_run_arg?(for_runnable: Runnable): Promise<void>;
-    around_run?<T>(for_runnable: Runnable<T>, run: () => Promise<T>): Promise<T>;
+
+    around_run?<T>(for_runnable: Runnable<T>, invoke: () => Promise<T>): Promise<T>;
 }
 
 type GET_PRODUCER_ARGS<T extends RunArgFactory> = REMOVE_HEAD<Parameters<T['produce_run_arg']>>;
@@ -27,7 +30,7 @@ function is_arounder(factory: RunArgFactory): factory is Arounder {
 export default function (
     instantiate: INSTANTIATOR,
 ) {
-    const reg = mr<RUN_ARG[]>()('property');
+    const get_registry = mrf.property_factory(mrf.key<RUN_ARG[]>());
 
     const run_arg = <T extends RunArgFactory>(
         Factory: CONSTRUCTOR<T>,
@@ -36,14 +39,12 @@ export default function (
         proto: Runnable<U>,
         method: string,
         index: number,
-    ) => {  reg(proto, method)
-                .getOrSet([])
-                .push({ index, Factory, args }) }
+    ) => get_registry(proto, method).get_or_set([]).push({ index, Factory, args });
 
     async function run<T>(
         runnable: Runnable<T>,
     ) {
-        let producers = reg(runnable, 'run').get();
+        let producers = get_registry(runnable, 'run').get();
         if (!producers?.length) return await runnable.run();
 
         let args: any[] = [];

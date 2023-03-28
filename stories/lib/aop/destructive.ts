@@ -1,6 +1,6 @@
-import { destructive_aop } from '@/lib/aop';
+import aop from '@/lib/aop/desctructive';
 
-const { before, after, around } = destructive_aop();
+const { before, after, around } = aop();
 
 class Target {
 

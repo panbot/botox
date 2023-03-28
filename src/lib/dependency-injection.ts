@@ -1,21 +1,21 @@
 import { CONSTRUCTOR } from './types';
-import mr from './metadata-registry';
+import mrf from './metadata-registry-factory';
 
 export default function () {
-    let services = new Map<ServiceKey, {
+    let services = new Map<SERVICE_KEY, {
         instance?: any,
-        factory?: (getter: Getter) => any,
+        factory?: (getter: GETTER) => any,
         ctor?: CONSTRUCTOR<any>,
-        multiple?: ServiceKey[],
+        multiple?: SERVICE_KEY[],
     }>();
-    let eventHandlers: Record<Events, Function[]> = {
+    let event_handlers: Record<EVENT, Function[]> = {
         instantiated: [],
     };
 
     function Inject(): Function;
     function Inject(name: string): Function;
     function Inject(type: () => any): Function;
-    function Inject(token: TokenType<any>): Function;
+    function Inject(token: TOKEN<any>): Function;
     function Inject() {
         const arg = arguments[0];
 
@@ -39,8 +39,8 @@ export default function () {
     }
 
     function Service(name: string): Function;
-    function Service(token: TokenType<any>): Function;
-    function Service(factory: (getter: Getter) => any): Function;
+    function Service(token: TOKEN<any>): Function;
+    function Service(factory: (getter: GETTER) => any): Function;
     function Service() {
         const arg = arguments[0];
 
@@ -53,23 +53,21 @@ export default function () {
                     if (def) {
                         def.multiple!.push(ctor);
                     } else {
-                        services.set(arg, { multiple: [ ctor ] })
+                        services.set(arg, { multiple: [ ctor ] });
                     }
                 } else {
                     services.set(arg, { ctor });
                 }
            } else if (typeof arg == 'function') {
-               services.set(ctor, {
-                   factory: arg,
-               })
+               services.set(ctor, { factory: arg });
            }
         }
     }
 
     function get(name: string): any;
     function get<T>(type: CONSTRUCTOR<T>): T;
-    function get<T>(token: TokenType<T>): T;
-    function get(arg: ServiceKey): any {
+    function get<T>(token: TOKEN<T>): T;
+    function get(arg: SERVICE_KEY): any {
         let service = services.get(arg);
         if (!service) {
             if (typeof arg == 'function') { // a construstor
@@ -84,11 +82,11 @@ export default function () {
         if (service.instance) return service.instance;
 
         if (service.factory) {
-            service.instance = service.factory(get as Getter);
+            service.instance = service.factory(get as GETTER);
         } else if (service.ctor) {
             service.instance = instantiate(service.ctor);
         } else if (service.multiple) {
-            service.instance = service.multiple.map(get as Getter);
+            service.instance = service.multiple.map(get as GETTER);
         } else {
             error(`unable to create service instance for "${arg.toString()}"`);
         }
@@ -114,7 +112,7 @@ export default function () {
         loop.set(ctor, instance);
 
         try {
-            for (let handler of eventHandlers.instantiated) {
+            for (let handler of event_handlers.instantiated) {
                 instance = handler(instance);
             }
 
@@ -132,7 +130,7 @@ export default function () {
     function on(event: string, handler: Function) {
         switch (event) {
             case 'instantiated':
-            eventHandlers.instantiated.push(handler);
+            event_handlers.instantiated.push(handler);
             break;
 
             default: throw new Error(`unknown event "${event}"`);
@@ -141,7 +139,7 @@ export default function () {
 
     function set<T>(name: string, instance: T): void;
     function set<T>(type: CONSTRUCTOR<T>, instance: T): void;
-    function set<T>(token: TokenType<T>, instance: T): void;
+    function set<T>(token: TOKEN<T>, instance: T): void;
     function set(k: any, instance: any) { services.set(k, { instance }) }
 
     function token<T>(
@@ -198,7 +196,7 @@ export default function () {
 
     function develop(injection: Injection): any {
         if (injection.factory) {
-            return injection.factory(get as Getter);
+            return injection.factory(get as GETTER);
         } else if (injection.name) {
             return get(injection.name)
         } else if (injection.token) {
@@ -218,31 +216,34 @@ export default function () {
 }
 
 class Token<T> {
+
+    #t!: T;
+
     constructor(
         public name: string,
         public multiple: boolean,
     ) { }
 }
 
-export type TokenType<T = any> = Token<T>;
+export type TOKEN<T = any> = Token<T>;
 
-type ServiceKey = string | TokenType | CONSTRUCTOR<any>;
-type Getter     = (v: ServiceKey) => any;
-type Developer  = (v: Injection) => any;
-type Events     = 'instantiated';
+type SERVICE_KEY = string | TOKEN | CONSTRUCTOR<any>;
+type GETTER      = (v: SERVICE_KEY) => any;
+type DEVELOPER   = (v: Injection) => any;
+type EVENT       = 'instantiated';
 
-type Point = {
+type POINT = {
     target: Object,
     property?: PropertyKey,
     index?: number,
 }
-interface Injection<P extends Point = Point> {
+interface Injection<P extends POINT = POINT> {
     point: P,
 
-    factory?: (getter: Getter) => any;
+    factory?: (getter: GETTER) => any;
     name?: string;
     type?: () => any;
-    token?: TokenType;
+    token?: TOKEN;
     ctor?: CONSTRUCTOR<any>;
 }
 
@@ -255,7 +256,7 @@ class ConstructorParameterInjectionManager {
     private getRegistry = mr<ConstructorParameterInjection[]>()('class');
 
     constructor(
-        public develop: Developer,
+        public develop: DEVELOPER,
     ) { }
 
     create(target: Object, index: number) {
@@ -289,7 +290,7 @@ class StaticPropertyInjectionManager {
     private getRegistry = mr<{ value: any }>()('property');
 
     constructor(
-        public develop: Developer,
+        public develop: DEVELOPER,
     ) { }
 
     create(target: Object, property: PropertyKey) {
@@ -313,7 +314,7 @@ class MemberPropertyInjectionManager {
     private getRegistry = mr<PropertyInjection>()('property');
 
     constructor(
-        public develop: Developer,
+        public develop: DEVELOPER,
     ) { }
 
     create(target: Object, property: PropertyKey) {
