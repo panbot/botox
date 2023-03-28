@@ -84,61 +84,28 @@ const factory = <T>(
     } satisfies Reflection<T>
 }
 
-const class_factory = <T>(
-    key: KEY<T>,
-    scheme?: (target: Object) => [ t: Object, p?: PropertyKey ],
-) => (
-    target: Object,
-) => factory(key, target, undefined, scheme);
-
-const property_factory = <T>(
-    key: KEY<T>,
-    scheme?: (target: Object, property: PropertyKey) => [ t: Object, p?: PropertyKey ],
-) => (
-    target: Object,
-    property: PropertyKey,
-) => factory(key, target, property, scheme);
-
-
-const inventory_factory = <T>(
-    key: KEY<T>,
-    scheme?: (target: Object, property: PropertyKey) => [ t: Object, p?: PropertyKey ],
-) => {
-    let get_registry = (
-        target: Object,
-        property: PropertyKey,
-    ) => {
-        let registry = factory(key, target, property, scheme);
-        before(registry, "set", () => inventory.add_property(key, target, property));
-        return registry;
-    }
-
-    return Object.assign(get_registry, {
-
-        get_properties: (
-            target: Object,
-        ) => inventory.get_properties(key, target),
-
-        for_each_property: (
-            target: Object,
-            callback: inventory.PROPERTY_CALLBACK<T>,
-        ) => inventory.for_each_property(key, target, callback, scheme),
-    });
-}
-
+export const get_factory_key = Symbol();
 const factory_factory = <
-    ARGS extends [ target: Object, property?: PropertyKey ],
+    ARGS extends [ target: Object, property?: MAYBE<PropertyKey> ],
 >(
-    args: typram.Typram<ARGS>
-) => {
-    return <T>(
-        key: KEY<T>,
-        scheme?: (...args: ARGS) => [ t: Object, p?: PropertyKey ],
-    ) => (...args: ARGS) => factory(key, args[0], args[1], scheme as SCHEME);
-}
+    args: typram.Typram<ARGS>,
+) => (
+    use_inventory: boolean,
+) => <T>(
+    key: KEY<T>,
+    scheme?: (...args: ARGS) => [ t: Object, p?: PropertyKey ],
+) => Object.assign((...args: ARGS) => {
+    let registry = factory(key, args[0], args[1], scheme as SCHEME);
 
-const f1 = factory_factory(typram<[ target: Object ]>());
-const f2 = factory_factory(typram<[ target: Object, property: PropertyKey ]>());
+    if (use_inventory) before(
+        registry, "set",
+        () => inventory.add_property(key, args[0], args[1])
+    );
+
+    return registry;
+}, {
+    [get_factory_key]() { return key }
+});
 
 const { before } = aop();
 
@@ -146,10 +113,23 @@ export default {
 
     key,
 
-    factory,
-    class_factory,
-    property_factory,
-    inventory_factory,
-    // optional_property_factory,
+    factory_factory,
 
+    class_factory: factory_factory(typram<[ target: Object ]>())(false),
+
+    property_factory: factory_factory(typram<[ target: Object, property: PropertyKey ]>()),
+
+    inventory_factory: <T>(
+        key: KEY<T>,
+        scheme?: SCHEME,
+    ) => (
+        target: Object
+    ) => ({
+
+        get: () => inventory.get_properties(key, target),
+
+        for_each: (
+            cb: inventory.PROPERTY_CALLBACK<T>
+        ) => inventory.for_each_property(key, target, cb, scheme),
+    })
 }

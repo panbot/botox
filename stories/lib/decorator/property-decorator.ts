@@ -48,7 +48,7 @@ class Options {
 
     console.log(dec.get_registry(DummyTarget, 'some_string_property').get_own());
 
-    let properties = dec.get_registry(DummyTarget, '').properties;
+    let properties = dec.get_properties(DummyTarget);
     console.log(properties.get().has('some_string_property'));
     properties.for_each((p, gr) => {
         console.log(p, gr().get(), gr().get_own());
@@ -88,7 +88,7 @@ class Options {
     }
 
     {
-        let properties = dec.get_registry(new DummyTarget(), '').properties;
+        let properties = dec.get_properties(new DummyTarget());
         console.log(properties.get().has('some_string_property'));
         properties.for_each((p, gr) => {
             console.log(p, gr().get(), gr().get_own());

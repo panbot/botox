@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import mrf, { Reflection } from "./metadata-registry-factory";
+import mrf, { get_factory_key, Reflection } from "./metadata-registry-factory";
 import assert from "assert";
 import expandify from "./expandify";
 import { CONSTRUCTOR, IS, MAYBE, REMOVE_HEAD, typram } from "./types";
@@ -32,30 +32,29 @@ type REPLACE_PARAMS<
     : [ TARGET, PROPERTY, ...REMOVE_HEAD<REMOVE_HEAD<ACTUAL_DECORATOR_PARAMS<DT>>> ]
 ;
 type REPLACE_GET_REGISTRY_PARAMS<
-    TYPEOF_GET_REGISTRY extends (...params: any) => any,
+    GET_REGISTRY extends (...params: any) => any,
     TARGET,
-    PROPERTY,
-> = Parameters<TYPEOF_GET_REGISTRY>["length"] extends 1
+> = Parameters<GET_REGISTRY>["length"] extends 1
     ? [ TARGET ]
-    : [ TARGET, PROPERTY ]
+    : [ TARGET, Parameters<GET_REGISTRY>[1] ]
 ;
 
 type INIT_BY_PARAMS<DT, PARAMS extends any[]> = DT extends "class" ? PARAMS : [ ...PARAMS, any ]
 
 const create = <
     DT extends DECORATOR_TYPE,
+    RFT extends REGISTRY_FACTORY_TYPE,
     TARGET_AS,
-    PROPERTY,
 >(
     decorator_type: DT,
     target_as: typram.Typram<TARGET_AS>,
-    property: typram.Typram<PROPERTY>,
+    registry_factory_type: RFT,
 ) => <
     FIELDS extends {},
     TARGET,
     _TARGET = GET_TARGET_PARAM<DT, TARGET, TARGET_AS>,
 >(options: {
-    init_by: (...args: INIT_BY_PARAMS<DT, REPLACE_PARAMS<DT, _TARGET, PROPERTY>>) => FIELDS
+    init_by: (...args: INIT_BY_PARAMS<DT, REPLACE_PARAMS<DT, _TARGET, PROPERTY_TYPES[RFT]>>) => FIELDS
     target?: typram.Typram<TARGET>,
 }) => {
     let factory = (values?: Partial<FIELDS> | ( (fields: FIELDS) => void )) => {
@@ -65,7 +64,7 @@ const create = <
             (...args: ACTUAL_DECORATOR_PARAMS<DT>) => {
                 let fields = options.init_by(...[
                     ...args,
-                    parameter_type_getters[decorator_type](...args)
+                    design_type_getters[decorator_type](...args)
                 ] as any);
 
                 if (typeof values == 'function') values(fields);
@@ -73,7 +72,11 @@ const create = <
 
                 works.forEach(work => work(fields));
 
-                decorator_setters[decorator_type](args, get_registry, fields);
+                decorator_setters[decorator_type](
+                    args,
+                    get_registry as SETTER_REGISTRY_FACTORY<FIELDS>[DT],
+                    fields
+                );
             }, {
                 get: (_, k, r) => (v: any) => {
                     // @TODO: check if k is keyof fields
@@ -84,12 +87,19 @@ const create = <
         ) as DECORATOR<DECORATORS[DT], FIELDS>
     }
 
-    const get_registry = rf(typram<FIELDS>(), decorator_type);
+    const get_registry = registry_factory(typram<FIELDS>(), registry_factory_type);
 
     return expandify(factory)[expandify.expand]({
+
         get_registry: get_registry as any as (
-            ...args: REPLACE_GET_REGISTRY_PARAMS<typeof get_registry, _TARGET, PROPERTY>
+            ...args: REPLACE_GET_REGISTRY_PARAMS<typeof get_registry, _TARGET>
         ) => ReturnType<typeof get_registry>,
+
+        get_properties: inventory_factory(
+            decorator_type,
+            typram<FIELDS>(),
+            get_registry[get_factory_key](),
+        ),
     })
 }
 
@@ -114,67 +124,90 @@ type ACTUAL_DECORATORS = {
     parameter :      ParameterDecorator,
 };
 
-type REGISTRY_FACTORY_SIGNATURES<T> = {
-    class     : (target: Object                        ) => Reflection<T>,
-    property  : (target: Object, property : PropertyKey) => Reflection<T>,
-    method    : (target: Object, property : PropertyKey) => Reflection<T>,
-    parameter : (target: Object, property?: PropertyKey) => Reflection<T[]>,
-}
+type REGISTRY_FACTORY_TYPE
+    = 'class'
+    | 'some_property'
+    | 'parameter'
+    | 'method_parameter'
+    | 'constructor_parameter'
+;
 
-const f = {
-    class: mrf.class_factory,
-    property: mrf.property_factory
+type PROPERTY_TYPES = {
+    class: never,
+    some_property: PropertyKey,
+    parameter: MAYBE<PropertyKey>,
+    method_parameter: PropertyKey,
+    constructor_parameter: never,
 }
 
 function registry_factory<
     FIELDS,
-    DT extends DECORATOR_TYPE
+    RFT extends REGISTRY_FACTORY_TYPE,
 >(
     fields: typram.Typram<FIELDS>,
-    decorator_type: DT
-): REGISTRY_FACTORY_SIGNATURES<FIELDS>[DT] {
-    switch (decorator_type) {
-        case 'class': {
-            let f: REGISTRY_FACTORY_SIGNATURES<FIELDS>["class"]
-                = mrf.class_factory(mrf.key<FIELDS>());
-            return f as any;
-        }
+    type: RFT,
+) {
+    const factories = {
+        class: mrf.class_factory(mrf.key<FIELDS>()),
 
-        case 'property':
-        case 'method'  : {
-            let f: REGISTRY_FACTORY_SIGNATURES<FIELDS>["property"]
-                = mrf.property_factory(mrf.key<FIELDS>());
-            return f as any;
-        }
+        some_property: mrf.property_factory(true)(mrf.key<FIELDS>()),
 
-        case 'parameter': {
-            let f: REGISTRY_FACTORY_SIGNATURES<FIELDS>["parameter"]
-                = mrf.property_factory(mrf.key<FIELDS[]>());
-            return f as any;
-        }
+        parameter: mrf.factory_factory(
+            typram<[ target: Object, property?: PropertyKey ]>(),
+        )(true)(mrf.key<FIELDS[]>()),
 
-        default: assert(false, 'should not be here');
+        method_parameter: mrf.factory_factory(
+            typram<[ target: Object, property: PropertyKey ]>(),
+        )(true)(mrf.key<FIELDS[]>()),
+
+        constructor_parameter: mrf.class_factory(mrf.key<FIELDS[]>()),
+    };
+
+    return factories[type];
+}
+
+function inventory_factory<
+    DT extends DECORATOR_TYPE,
+    FIELDS,
+>(
+    decorator_type: DT,
+    fields: typram.Typram<FIELDS>,
+    key: typram.Typram<any>,
+) {
+    const factories = {
+        class: mrf.inventory_factory(key as typram.Typram<FIELDS>),
+        property: mrf.inventory_factory(key as typram.Typram<FIELDS>),
+        method: mrf.inventory_factory(key as typram.Typram<FIELDS>),
+        parameter: mrf.inventory_factory(key as typram.Typram<FIELDS[]>),
     }
+    return factories[decorator_type];
+}
+
+type SETTER_REGISTRY_FACTORY<T> = {
+    class     : (target: Object                        ) => Reflection<T>
+    property  : (target: Object, property : PropertyKey) => Reflection<T>
+    method    : (target: Object, property : PropertyKey) => Reflection<T>
+    parameter : (target: Object, property?: PropertyKey) => Reflection<T[]>
 }
 
 type SETTER<
     DT extends DECORATOR_TYPE,
 > = <T>(
     args: DECORATOR_PARAMS<DT>,
-    get_registry: REGISTRY_FACTORY_SIGNATURES<T>[DT],
+    get_registry: SETTER_REGISTRY_FACTORY<T>[DT],
     value: T
 ) => void
 
 const decorator_setters: {
     [ P in DECORATOR_TYPE ]: SETTER<P>
 } = {
-    class     : ( ([ t       ], gr, v) => gr(t   ).set(v)                ),
-    property  : ( ([ t, p    ], gr, v) => gr(t, p).set(v)                ),
-    method    : ( ([ t, p    ], gr, v) => gr(t, p).set(v)                ),
-    parameter : ( ([ t, p, i ], gr, v) => gr(t, p).get_or_set([])[i] = v ),
+    class:     ([ t       ], gr, v) => gr(t   ).set(v),
+    property:  ([ t, p    ], gr, v) => gr(t, p).set(v),
+    method:    ([ t, p    ], gr, v) => gr(t, p).set(v),
+    parameter: ([ t, p, i ], gr, v) => gr(t, p).get_or_set([])[i] = v,
 }
 
-const parameter_type_getters: {
+const design_type_getters: {
     [ P in DECORATOR_TYPE ]: (...args: ACTUAL_DECORATOR_PARAMS<P>) => any
 } = {
     class     : (         ) => undefined,
@@ -197,36 +230,27 @@ const target_types = {
     instance    : typram<'instance'>(),
 }
 
-const property_types = {
-    never    : typram<1>(),
-    some     : typram<      PropertyKey >(),
-    optional : typram<MAYBE<PropertyKey>>(),
-}
-
 export default {
-    create_class_decorator: create(
-        'class',
-        target_types.constructor,
-        property_types.never,
-    ),
+    create_class_decorator: create('class', target_types.constructor, 'class'),
 
     create_property_decorator:
-        Object.assign( create('property', target_types.either,      property_types.some), {
-             instance: create('property', target_types.instance,    property_types.some),
-               static: create('property', target_types.constructor, property_types.some), } ),
+        Object.assign( create('property', target_types.either,      'some_property'), {
+             instance: create('property', target_types.instance,    'some_property'),
+               static: create('property', target_types.constructor, 'some_property'), } ),
 
     create_method_decorator:
-        Object.assign( create('method', target_types.either,      property_types.some), {
-             instance: create('method', target_types.instance,    property_types.some),
-               static: create('method', target_types.constructor, property_types.some), }),
+        Object.assign( create('method', target_types.either,      'some_property'), {
+             instance: create('method', target_types.instance,    'some_property'),
+               static: create('method', target_types.constructor, 'some_property'), }),
 
     create_parameter_decorator:
-        Object.assign( create('parameter', target_types.either,      property_types.optional), {
-          constructor: create('parameter', target_types.constructor, property_types.never   ),
-      instance_method: create('parameter', target_types.instance,    property_types.some    ),
-        static_method: create('parameter', target_types.constructor, property_types.some    ), }),
+        Object.assign( create('parameter', target_types.either,      'parameter'            ), {
+          constructor: create('parameter', target_types.constructor, 'constructor_parameter'),
+      instance_method: create('parameter', target_types.instance,    'method_parameter'     ),
+        static_method: create('parameter', target_types.constructor, 'method_parameter'     ), }),
 
     target: typram.factory(),
+
     target_types: {
         constructor: typram<'constructor'>(),
         instance: typram<'instance'>(),

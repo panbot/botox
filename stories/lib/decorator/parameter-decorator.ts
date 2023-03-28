@@ -106,3 +106,30 @@ class Options {
     console.log(static_method_parameter_decorator.get_registry(AnotherTarget, 'method2').get_own());
 
 }
+
+{
+    type EXPECTED = CONSTRUCTOR<{}>;
+
+    let dec = decorator.create_parameter_decorator.constructor({
+        init_by: (target, property, index, type) => {
+            asserts.assert_true<IS< typeof target   , EXPECTED    >>();
+            asserts.assert_true<IS< typeof property , never       >>();
+            asserts.assert_true<IS< typeof index    , number      >>();
+            asserts.assert_true<IS< typeof type     , any         >>();
+
+            return new Options(type);
+        },
+        target: decorator.target<{}>(),
+    });
+    type GET_REGISTRY_PARAMETERS = Parameters<typeof dec["get_registry"]>;
+
+    class DummyTarget {
+        constructor(
+
+        ) { }
+    }
+
+    let registry = dec.get_registry(DummyTarget);
+    let options = registry.get();
+    asserts.assert_true< IS<typeof options, MAYBE<Options[]> >>();
+}
