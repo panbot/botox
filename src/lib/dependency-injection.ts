@@ -158,7 +158,7 @@ export default function () {
         instantiate,
         on,
 
-        createInject: (
+        create_inject: (
             factory: (getter: typeof get) => any,
         ) => (
             target: Object,
@@ -194,7 +194,7 @@ export default function () {
         }
     }
 
-    function develop(injection: Injection): any {
+    function develop(injection: INJECTION): any {
         if (injection.factory) {
             return injection.factory(get as GETTER);
         } else if (injection.name) {
@@ -229,7 +229,7 @@ export type TOKEN<T = any> = Token<T>;
 
 type SERVICE_KEY = string | TOKEN | CONSTRUCTOR<any>;
 type GETTER      = (v: SERVICE_KEY) => any;
-type DEVELOPER   = (v: Injection) => any;
+type DEVELOPER   = (v: INJECTION) => any;
 type EVENT       = 'instantiated';
 
 type POINT = {
@@ -237,7 +237,7 @@ type POINT = {
     property?: PropertyKey,
     index?: number,
 }
-interface Injection<P extends POINT = POINT> {
+type INJECTION<P extends POINT = POINT> ={
     point: P,
 
     factory?: (getter: GETTER) => any;
@@ -247,7 +247,7 @@ interface Injection<P extends POINT = POINT> {
     ctor?: CONSTRUCTOR<any>;
 }
 
-type ConstructorParameterInjection = Injection<{
+type ConstructorParameterInjection = INJECTION<{
     target: Object,
     index: number,
 }>;
@@ -280,7 +280,7 @@ class ConstructorParameterInjectionManager {
     }
 }
 
-type PropertyInjection = Injection<{
+type PropertyInjection = INJECTION<{
     target: Object,
     property: PropertyKey,
 }>;

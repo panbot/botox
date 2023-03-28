@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import mrf, { Reflection, ReflectProperties } from "./metadata-registry-factory";
+import mrf, { Reflection } from "./metadata-registry-factory";
 import assert from "assert";
 import expandify from "./expandify";
 import { CONSTRUCTOR, IS, MAYBE, REMOVE_HEAD, typram } from "./types";
@@ -84,7 +84,7 @@ const create = <
         ) as DECORATOR<DECORATORS[DT], FIELDS>
     }
 
-    const get_registry = registry_factory(typram<FIELDS>(), decorator_type);
+    const get_registry = rf(typram<FIELDS>(), decorator_type);
 
     return expandify(factory)[expandify.expand]({
         get_registry: get_registry as any as (
@@ -116,9 +116,14 @@ type ACTUAL_DECORATORS = {
 
 type REGISTRY_FACTORY_SIGNATURES<T> = {
     class     : (target: Object                        ) => Reflection<T>,
-    property  : (target: Object, property : PropertyKey) => Reflection<T>   & ReflectProperties<T>,
-    method    : (target: Object, property : PropertyKey) => Reflection<T>   & ReflectProperties<T>,
-    parameter : (target: Object, property?: PropertyKey) => Reflection<T[]> & ReflectProperties<T[]>,
+    property  : (target: Object, property : PropertyKey) => Reflection<T>,
+    method    : (target: Object, property : PropertyKey) => Reflection<T>,
+    parameter : (target: Object, property?: PropertyKey) => Reflection<T[]>,
+}
+
+const f = {
+    class: mrf.class_factory,
+    property: mrf.property_factory
 }
 
 function registry_factory<
