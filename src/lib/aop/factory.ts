@@ -1,5 +1,4 @@
 import "reflect-metadata";
-import assert from 'assert';
 
 type POINTCUT = { target: any, method: PropertyKey, args: any[] }
 
@@ -60,7 +59,7 @@ export default Object.assign(aop_factory, {
     }
 })
 
-function assert_is_function(v: unknown, o: any, k: PropertyKey, ) {
-    assert(typeof v == 'function', `${o.constructor.name}.${k.toString()} is not a function`);
-    return v;
+function assert_is_function(value: unknown, object: any, property: PropertyKey, ) {
+    if (typeof value != 'function') throw new Error('not a function', { cause: { value, object, property }});
+    return value;
 }

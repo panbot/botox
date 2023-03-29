@@ -1,13 +1,13 @@
-import { REMOVE_TAIL } from "./types";
+import { MAYBE, REMOVE_TAIL } from "./types";
 
 export class MapMap<KEYS extends any[], VALUE> {
 
     map = new Map<any, any>();
 
-    get(...keys: KEYS): VALUE {
+    get(...keys: KEYS) {
         let key = keys.pop();
         let map = this.get_map(keys as unknown as REMOVE_TAIL<KEYS>);
-        return map?.get(key);
+        return map?.get(key) as MAYBE<VALUE>;
     }
 
     set(...args: [ ...KEYS, VALUE ]) {
