@@ -13,8 +13,8 @@ export default function () {
     } = {
         instantiated: [],
         injection: [
-            i =>    i.point.type == 'static_property'
-                &&  injectors.static_property.inject(i.point.target as CONSTRUCTOR<any>),
+            i => i.point.type == 'static_property'
+                && injectors.static_property.inject(i.point.target as CONSTRUCTOR<any>),
         ],
     };
 
@@ -34,7 +34,7 @@ export default function () {
         instantiate,
 
         create_inject: (
-            factory: (getter: typeof get) => any,
+            factory: SERVICE_FACTORY,
         ) => create_inject({ type: 'factory', factory }),
 
         on: <E extends EVENT>(event: E, handler: EVENT_HANDLERS[E]) => event_handlers[event].push(handler),
@@ -80,7 +80,7 @@ export default function () {
 
     function develop(injection: INJECTION): any {
         if (injection.service) {
-            return services.get(injection.service)
+            return get(injection.service)
         } else if (injection.point.design_type) {
             return get(injection.point.design_type)
         } else {
@@ -165,17 +165,17 @@ export default function () {
 
         return injection;
 
-        function create_service(): MAYBE<SERVICE> {
+        function create_service(): MAYBE<SERVICE_KEY> {
             if (!service) return;
 
             if (typeof service == 'string') {
-                return { name: service };
+                return { type: 'name', name: service };
             } else if (typeof service == 'function') {
-                return { get_type: service };
+                return { type: 'get_type', get_type: service };
             } else if (service instanceof Token) {
-                return { token: service }
-            } else if (service.type) {
-                return { factory: service }
+                return { type: 'token', token: service };
+            } else {
+                return service;
             }
         }
     }
@@ -223,32 +223,44 @@ export default function () {
         }
     }
 
-    function create_service() {
-        let services = new Map<any, any>();
-        return {
-            get: (service: SERVICE_VALUE) => {
-                let key: any;
+    type SERVICE_OPTIONS = {
+        factory?: (get: GETTER) => any,
+        name?: string,
+        token?: Token,
+    }
+    function create_service_decorator() {
+        return decorator.create_class_decorator({
+            init_by: (
+                value: string | Token | ((get: GETTER) => any),
+                [ constructor ],
+            ): SERVICE_OPTIONS => {
+                let options: SERVICE_OPTIONS = {};
+                if (typeof value == 'string') {
+                    options.name = value;
 
-                if (typeof service == 'string') {
-                    key = service;
-                } else if (typeof service == 'function') {
-                    key = service();
-                } else if (service instanceof Token) {
-                    key = service;
+                } else if (value instanceof Token) {
+                    options.token = value;
+                    options.token.services.push({ type: 'class', constructor });
                 } else {
-
+                    options.factory = value;
                 }
+                return options;
             },
-            set: () => {
-
-            },
-        }
+            target: decorator.target<{}>(),
+        });
     }
 }
 
 
-class Token<T> {
+class Token<T = any> {
     #t!: T;
+
+    public services: SERVICE_KEY[] = [];
+
+    constructor(
+        public description: string,
+        public multiple: boolean = false,
+    ) { }
 }
 
 type INJECTION_DECORATOR
@@ -264,25 +276,12 @@ type POINT = {
     design_type : any
 }
 
-type SERVICE = {
-    name: string,
-} | {
-    get_type: () => any,
-} | {
-    token: Token<any>,
-} | {
-    factory: SERVICE_FACTORY,
-}
-type UNION_VALUES<U>
-    = U extends { [ _: PropertyKey ]: infer T }
-    ? T
-    : never
-type SERVICE_VALUE = UNION_VALUES<SERVICE>
+type SERVICE_VALUE = string | Token | (() => any) | SERVICE_KEY
 type SERVICE_ARG = MAYBE<SERVICE_VALUE>
 
 type INJECTION<P extends POINT = POINT> = {
     point: P,
-    service: MAYBE<SERVICE>,
+    service: MAYBE<SERVICE_KEY>,
     developed: MAYBE<{ value: any }>,
 }
 
@@ -302,9 +301,23 @@ type EVENT_HANDLERS = {
 }
 type EVENT = keyof EVENT_HANDLERS
 
-type SERVICE_FACTORY = {
+type SERVICE_KEY = {
+    type: 'name',
+    name: string,
+} | {
+    type: 'token',
+    token: Token,
+} | {
+    type: 'get_type',
+    get_type: () => any,
+} | {
     type: 'factory',
     factory: (getter: GETTER) => any;
+} | {
+    type: 'class',
+    constructor: CONSTRUCTOR<any>,
 }
 
 type GETTER = (v: SERVICE_KEY) => any;
+
+type SERVICE_FACTORY = (get: GETTER) => any
