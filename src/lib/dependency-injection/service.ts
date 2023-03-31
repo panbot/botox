@@ -30,20 +30,23 @@ export default function (
         return instance;
     });
 
+    const by_get_class = ( get_class : () => CONSTRUCTOR  ) => by_class(get_class());
+    const by_factory   = ( factory   : di.SERVICE_FACTORY ) => factory (get_service);
+
     const getters = {
         by_name,
         by_token,
         by_class,
-        by_get_class: ( get_class : () => CONSTRUCTOR  ) => by_class(get_class()),
-        by_factory:   ( factory   : di.SERVICE_FACTORY ) => factory (get_service),
+        by_get_class,
+        by_factory,
 
         by_service_key(service_key: di.SERVICE_KEY) {
             switch (service_key.type) {
-                case 'name'      : return this.by_name      (service_key.name       )
-                case 'token'     : return this.by_token     ( service_key.token     )
-                case 'get_class' : return this.by_get_class ( service_key.get_class )
-                case 'class'     : return this.by_class     ( service_key.class     )
-                case 'factory'   : return this.by_factory   ( service_key.factory   )
+                case 'name'      : return by_name      (service_key.name       )
+                case 'token'     : return by_token     ( service_key.token     )
+                case 'class'     : return by_class     ( service_key.class     )
+                case 'get_class' : return by_get_class ( service_key.get_class )
+                case 'factory'   : return by_factory   ( service_key.factory   )
 
                 default: throw new Error('should not be here');
             }

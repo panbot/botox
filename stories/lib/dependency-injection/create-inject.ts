@@ -5,7 +5,7 @@ const container = di();
 type AppParameters = {
     env: string,
 }
-let token = container.token<AppParameters>('app parameters');
+let token = container.create_token<AppParameters>('app parameters');
 container.set(
     token,
     {
