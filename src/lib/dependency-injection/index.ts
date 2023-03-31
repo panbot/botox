@@ -6,7 +6,7 @@ import { dependency_injection as di } from './types';
 export default function () {
     const service = create_service(instantiate);
     const get = service.get_service;
-    const injectors = create_injectors(get);
+    const injectors = create_injectors(get.by_service_key);
 
     const event_handlers: {
         [ P in di.EVENT ]: di.EVENT_HANDLERS[P][]

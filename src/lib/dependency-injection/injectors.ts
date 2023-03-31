@@ -3,10 +3,9 @@ import expandify from "../expandify";
 import { MapMap } from "../map-map";
 import { CONSTRUCTOR, MAYBE } from "../types";
 import { dependency_injection as di } from "./types";
-import service_factory from './service';
 
 export default function (
-    get: ReturnType<typeof service_factory>["get_service"],
+    get_by_service_key: (service_key: di.SERVICE_KEY) => any,
 ) {
     let injection_events: di.INJECTION[] = [];
     let injectors = create_injectors();
@@ -62,24 +61,24 @@ export default function (
     ) {
         let injection: di.INJECTION<P> = {
             point,
-            get_service: create(),
+            get_service: () => get_by_service_key(create_service_key()),
         };
         injection_events.push(injection);
 
         return injection;
 
-        function create() {
+        function create_service_key(): di.SERVICE_KEY {
             if (!service) {
                 assert_not_built_in(point.design_type);
-                return () => get.by_service_key({ type: 'class', class: point.design_type });
+                return { type: 'class', class: point.design_type };
             } else if (typeof service == 'function') {
-                return () => get.by_service_key({ type: 'class', class: service() });
+                return { type: 'class', class: service() };
             } else if (typeof service == 'string') {
-                return () => get.by_name(service);
+                return { type: 'name', name: service };
             } else if (service instanceof di.Token) {
-                return () => get.by_token(service);
+                return { type: 'token', token: service };
             } else {
-                return () => get.by_service_key(service);
+                return service;
             }
         }
     }
