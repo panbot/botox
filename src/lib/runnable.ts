@@ -40,7 +40,7 @@ function is_arounder(factory: runnable.RunArgFactory): factory is Arounder {
 export default function (
     instantiate: INSTANTIATOR,
 ) {
-    const get_registry = mr.property_factory(false)(mr.key<RUN_ARG[]>());
+    const get_registry = mr.property_factory(false)(mr.create_key<RUN_ARG[]>());
 
     return {
         run,

@@ -3,7 +3,7 @@ import { MAYBE, typram } from "./types";
 import aop from './aop/injective';
 
 type KEY<T = unknown> = typram.Typram<T>;
-const key = typram.factory<any>();
+const create_key = typram.factory<any>();
 
 type SCHEME = (target: any, property?: any) => [ t: any, p?: any ]
 
@@ -100,11 +100,21 @@ const factory_factory = <
 
     return registry;
 }, {
-    [metadata_registry.get_factory_key]() { return key }
+    [metadata_registry.get_properties]: (
+        target: Object
+    ) => ({
+
+        get: () => inventory.get_properties<ARGS[1]>(key, target),
+
+        for_each: (
+            cb: inventory.PROPERTY_CALLBACK<ARGS[1], T>
+        ) => inventory.for_each_property(typram<ARGS[1]>(), key, target, cb, scheme as SCHEME),
+    }),
 });
 
 export namespace metadata_registry {
-    export const get_factory_key = Symbol();
+    export const get_registry = Symbol();
+    export const get_properties = Symbol();
 
     export interface Reflection<T> {
         readonly key: KEY<T>
@@ -119,26 +129,11 @@ export namespace metadata_registry {
 
 export default {
 
-    key,
+    create_key,
 
     factory_factory,
 
     class_factory: factory_factory(typram<[ target: Object ]>())(false),
 
     property_factory: factory_factory(typram<[ target: Object, property: PropertyKey ]>()),
-
-    inventory_factory: <P extends MAYBE<PropertyKey>, T>(
-        property_type: typram.Typram<P>,
-        key: KEY<T>,
-        scheme?: SCHEME,
-    ) => (
-        target: Object
-    ) => ({
-
-        get: () => inventory.get_properties<P>(key, target),
-
-        for_each: (
-            cb: inventory.PROPERTY_CALLBACK<P, T>
-        ) => inventory.for_each_property(property_type, key, target, cb, scheme),
-    })
 }

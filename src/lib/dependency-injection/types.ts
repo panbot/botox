@@ -1,3 +1,4 @@
+import { decorator } from "../decorator";
 import { CONSTRUCTOR, MAYBE, typram } from "../types";
 
 export namespace dependency_injection {
@@ -74,8 +75,8 @@ export namespace dependency_injection {
     ;
 
     export type DECORATOR_OF_INJECTOR<
-        I extends { decorator: any }
-    > = I["decorator"] extends typram.Typram<infer D> ? D : never
+        I extends { [decorator.decorator]: typram.Typram<any> }
+    > = I[typeof decorator.decorator] extends typram.Typram<infer D> ? D : never
 
     export type INJECT_SERVICE = MAYBE<string | Token | ( () => CONSTRUCTOR ) | SERVICE_KEY>
 

@@ -2,6 +2,7 @@ import decorator from "../decorator";
 import expandify from "../expandify";
 import { CONSTRUCTOR, INSTANTIATOR } from "../types";
 import { dependency_injection as di } from "./types";
+import { metadata_registry as mr } from "../metadata-registry";
 
 export default function (
     instantiate: INSTANTIATOR,
@@ -24,7 +25,7 @@ export default function (
     });
     const by_class = create_get_by((type: CONSTRUCTOR) => {
         let instance
-            =  service_decorator.get_registry(type).get_own()?.factory?.(get_service)
+            =  service_decorator[mr.get_registry](type).get_own()?.factory?.(get_service)
             || instantiate(type);
         instances.set(type, instance);
         return instance;

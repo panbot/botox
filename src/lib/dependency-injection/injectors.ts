@@ -3,6 +3,7 @@ import expandify from "../expandify";
 import { MapMap } from "../map-map";
 import { CONSTRUCTOR, MAYBE } from "../types";
 import { dependency_injection as di } from "./types";
+import { metadata_registry as mr } from "../metadata-registry";
 
 export default function (
     get_by_service_key: (service_key: di.SERVICE_KEY) => any,
@@ -93,7 +94,7 @@ export default function (
         })[expandify.expand](d => ({
 
             instantiate: (ctor: CONSTRUCTOR<any>, args?: any[]) => new ctor(
-                ...d.get_registry(ctor).get()?.reduce(
+                ...d[mr.get_registry](ctor).get()?.reduce(
                     (pv, cv) => ( pv[cv.point.index] = cv.get_service(), pv ),
                     args || []
                 ) || [],
@@ -108,7 +109,7 @@ export default function (
             target: decorator.target<Object>(),
         })[expandify.expand](d => ({
 
-            inject: (instance: Object) => d.get_properties(instance).for_each(
+            inject: (instance: Object) => d[mr.get_registry][mr.get_properties](instance).for_each(
                 (property, get_registry) => Reflect.defineProperty(
                     instance,
                     property,
@@ -125,7 +126,7 @@ export default function (
             target: decorator.target<Object>(),
         })[expandify.expand](d => ({
 
-            inject: (ctor: CONSTRUCTOR<Object>) => d.get_properties(ctor).for_each(
+            inject: (ctor: CONSTRUCTOR<Object>) => d[mr.get_registry][mr.get_properties](ctor).for_each(
                 (property, get_registry) => Reflect.defineProperty(
                     ctor, property,
                     {

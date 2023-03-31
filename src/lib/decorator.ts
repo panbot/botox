@@ -3,10 +3,6 @@ import mr, { metadata_registry } from "./metadata-registry";
 import expandify from "./expandify";
 import { CONSTRUCTOR, IS, MAYBE, REMOVE_HEAD, typram } from "./types";
 
-export type DECORATOR<D, T> = D & Required<{
-    [ P in keyof NON_READONLY<T> ]: (v: T[P]) => DECORATOR<D, T>
-}>;
-
 type DECORATOR_PARAMS<T extends DECORATOR_TYPE> = Parameters<DECORATORS[T]>
 type ACTUAL_DECORATOR_PARAMS<T extends DECORATOR_TYPE> = Parameters<ACTUAL_DECORATORS[T]>
 type REPLACE_TARGET<
@@ -78,7 +74,7 @@ const create = <
                 works.push(o => o[k as keyof FIELDS] = v);
                 return r;
             }
-        }) as DECORATOR<DECORATORS[DT], FIELDS>
+        }) as decorator.DECORATOR<DECORATORS[DT], FIELDS>
     }
 
     const get_registry = registry_factory(
@@ -89,16 +85,9 @@ const create = <
 
     return expandify(factory)[expandify.expand]({
 
-        get_registry,
+        [decorator.decorator]: typram<DECORATORS[DT]>(),
 
-        get_properties: inventory_factory(
-            decorator_type,
-            typram<FIELDS>(),
-            typram<PROPERTY_TYPES[RFT]>(),
-            get_registry[metadata_registry.get_factory_key](),
-        ),
-
-        decorator: typram<DECORATORS[DT]>(),
+        [metadata_registry.get_registry]: get_registry,
     })
 }
 
@@ -149,46 +138,22 @@ function registry_factory<
     type: RFT,
 ) {
     const factories = {
-        class: mr.factory_factory(typram<[ target: TARGET ]>())(false)(mr.key<FIELDS>()),
+        class: mr.factory_factory(typram<[ target: TARGET ]>())(false)(mr.create_key<FIELDS>()),
 
-        some_property: mr.factory_factory(typram<[ target: TARGET, property: PropertyKey ]>())(true)(mr.key<FIELDS>()),
+        some_property: mr.factory_factory(typram<[ target: TARGET, property: PropertyKey ]>())(true)(mr.create_key<FIELDS>()),
 
         parameter: mr.factory_factory(
             typram<[ target: TARGET, property?: PropertyKey ]>(),
-        )(true)(mr.key<FIELDS[]>()),
+        )(true)(mr.create_key<FIELDS[]>()),
 
         method_parameter: mr.factory_factory(
             typram<[ target: TARGET, property: PropertyKey ]>(),
-        )(true)(mr.key<FIELDS[]>()),
+        )(true)(mr.create_key<FIELDS[]>()),
 
-        constructor_parameter: mr.factory_factory(typram<[ target: TARGET ]>())(false)(mr.key<FIELDS[]>()),
+        constructor_parameter: mr.factory_factory(typram<[ target: TARGET ]>())(false)(mr.create_key<FIELDS[]>()),
     };
 
     return factories[type];
-}
-
-function inventory_factory<
-    DT extends DECORATOR_TYPE,
-    FIELDS,
-    P extends MAYBE<PropertyKey>,
->(
-    decorator_type: DT,
-    fields: typram.Typram<FIELDS>,
-    property_type: typram.Typram<P>,
-    key: typram.Typram<any>,
-) {
-    const create = <T>() => mr.inventory_factory(
-        property_type,
-        key as typram.Typram<T>
-    );
-
-    const factories = {
-        class     : create<FIELDS>(),
-        property  : create<FIELDS>(),
-        method    : create<FIELDS>(),
-        parameter : create<FIELDS[]>(),
-    }
-    return factories[decorator_type];
 }
 
 type SETTER_REGISTRY_FACTORY<T> = {
@@ -237,6 +202,15 @@ const target_types = {
     either      : typram<'constructor' | 'instance'>(),
     constructor : typram<'constructor'>(),
     instance    : typram<'instance'>(),
+}
+
+export namespace decorator {
+
+    export const decorator = Symbol();
+
+    export type DECORATOR<D, T> = D & Required<{
+        [ P in keyof NON_READONLY<T> ]: (v: T[P]) => DECORATOR<D, T>
+    }>;
 }
 
 export default {
