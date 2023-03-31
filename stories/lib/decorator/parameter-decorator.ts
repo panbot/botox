@@ -13,13 +13,13 @@ class Options {
     type EXPECTED = CONSTRUCTOR<{}> | {};
 
     const parameter_decorator = decorator.create_parameter_decorator({
-        init_by: (target, property, index, type) => {
-            asserts.assert_true<IS< typeof target   , EXPECTED           >>();
-            asserts.assert_true<IS< typeof property , MAYBE<PropertyKey> >>();
-            asserts.assert_true<IS< typeof index    , number             >>();
-            asserts.assert_true<IS< typeof type     , any                >>();
+        init_by: ({ args: [ target, property, index ], design_type }) => {
+            asserts.assert_true<IS< typeof target      , EXPECTED           >>();
+            asserts.assert_true<IS< typeof property    , MAYBE<PropertyKey> >>();
+            asserts.assert_true<IS< typeof index       , number             >>();
+            asserts.assert_true<IS< typeof design_type , any                >>();
 
-            return new Options(type);
+            return new Options(design_type);
         },
         target: decorator.target<{}>(),
     });
@@ -31,13 +31,13 @@ class Options {
     type EXPECTED = {};
 
     const d = decorator.create_parameter_decorator.instance_method({
-        init_by: (target, property, index, type) => {
-            asserts.assert_true<IS< typeof target   , EXPECTED    >>();
-            asserts.assert_true<IS< typeof property , PropertyKey >>();
-            asserts.assert_true<IS< typeof index    , number      >>();
-            asserts.assert_true<IS< typeof type     , any         >>();
+        init_by: ({ args: [ target, property, index ], design_type }) => {
+            asserts.assert_true<IS< typeof target      , EXPECTED           >>();
+            asserts.assert_true<IS< typeof property    , PropertyKey        >>();
+            asserts.assert_true<IS< typeof index       , number             >>();
+            asserts.assert_true<IS< typeof design_type , any                >>();
 
-            return new Options(type);
+            return new Options(design_type);
         },
         target: decorator.target<{}>(),
     });
@@ -64,13 +64,13 @@ class Options {
     type EXPECTED = CONSTRUCTOR<{}>;
 
     const static_method_parameter_decorator = decorator.create_parameter_decorator.static_method({
-        init_by: (target, property, index, type) => {
-            asserts.assert_true<IS< typeof target   , EXPECTED    >>();
-            asserts.assert_true<IS< typeof property , PropertyKey >>();
-            asserts.assert_true<IS< typeof index    , number      >>();
-            asserts.assert_true<IS< typeof type     , any         >>();
+        init_by: ({ args: [ target, property, index ], design_type }) => {
+            asserts.assert_true<IS< typeof target      , EXPECTED           >>();
+            asserts.assert_true<IS< typeof property    , PropertyKey        >>();
+            asserts.assert_true<IS< typeof index       , number             >>();
+            asserts.assert_true<IS< typeof design_type , any                >>();
 
-            return new Options(type);
+            return new Options(design_type);
         },
         target: decorator.target<{}>(),
     });
@@ -111,13 +111,13 @@ class Options {
     type EXPECTED = CONSTRUCTOR<{}>;
 
     let dec = decorator.create_parameter_decorator.constructor({
-        init_by: (target, property, index, type) => {
-            asserts.assert_true<IS< typeof target   , EXPECTED    >>();
-            asserts.assert_true<IS< typeof property , never       >>();
-            asserts.assert_true<IS< typeof index    , number      >>();
-            asserts.assert_true<IS< typeof type     , any         >>();
+        init_by: ({ args: [ target, property, index ], design_type }) => {
+            asserts.assert_true<IS< typeof target      , EXPECTED           >>();
+            asserts.assert_true<IS< typeof property    , never              >>();
+            asserts.assert_true<IS< typeof index       , number             >>();
+            asserts.assert_true<IS< typeof design_type , any                >>();
 
-            return new Options(type);
+            return new Options(design_type);
         },
         target: decorator.target<{}>(),
     });

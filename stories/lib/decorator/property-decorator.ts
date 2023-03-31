@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import decorator from "@/lib/decorator";
-import { CONSTRUCTOR, IS } from "@/lib/types";
+import { CONSTRUCTOR, IS, MAYBE } from "@/lib/types";
 import * as asserts from "stories/asserts";
 
 class Options {
@@ -14,11 +14,12 @@ class Options {
     type EXPECTED = CONSTRUCTOR<{}> | {};
 
     const dec = decorator.create_property_decorator({
-        init_by: (target, property, descriptor, type) => {
-            asserts.assert_true<IS< typeof target   , EXPECTED    >>();
-            asserts.assert_true<IS< typeof property , PropertyKey >>();
-            asserts.assert_true<IS< typeof type     , any         >>();
-            return new Options(type);
+        init_by: ({ args: [ target, property, descriptor ], design_type }) => {
+            asserts.assert_true<IS< typeof target      , EXPECTED                   >>();
+            asserts.assert_true<IS< typeof property    , PropertyKey                >>();
+            asserts.assert_true<IS< typeof descriptor  , MAYBE<PropertyDescriptor> >>();
+            asserts.assert_true<IS< typeof design_type , any                       >>();
+            return new Options(design_type);
         },
         target: decorator.target<{}>(),
     });
@@ -30,11 +31,12 @@ class Options {
     type EXPECTED = CONSTRUCTOR<{}>;
 
     const dec = decorator.create_property_decorator.static({
-        init_by: (target, property, descriptor, type) => {
-            asserts.assert_true<IS< typeof target   , EXPECTED    >>();
-            asserts.assert_true<IS< typeof property , PropertyKey >>();
-            asserts.assert_true<IS< typeof type     , any         >>();
-            return new Options(type);
+        init_by: ({ args: [ target, property, descriptor ], design_type }) => {
+            asserts.assert_true<IS< typeof target      , EXPECTED                   >>();
+            asserts.assert_true<IS< typeof property    , PropertyKey                >>();
+            asserts.assert_true<IS< typeof descriptor  , MAYBE<PropertyDescriptor> >>();
+            asserts.assert_true<IS< typeof design_type , any                       >>();
+            return new Options(design_type);
         },
         target: decorator.target<{}>(),
     });
@@ -59,11 +61,12 @@ class Options {
     type EXPECTED = {};
 
     const dec = decorator.create_property_decorator.instance({
-        init_by: (target, property, descriptor, type) => {
-            asserts.assert_true<IS< typeof target   , EXPECTED    >>();
-            asserts.assert_true<IS< typeof property , PropertyKey >>();
-            asserts.assert_true<IS< typeof type     , any         >>();
-            return new Options(type);
+        init_by: ({ args: [ target, property, descriptor ], design_type }) => {
+            asserts.assert_true<IS< typeof target      , EXPECTED                   >>();
+            asserts.assert_true<IS< typeof property    , PropertyKey                >>();
+            asserts.assert_true<IS< typeof descriptor  , MAYBE<PropertyDescriptor> >>();
+            asserts.assert_true<IS< typeof design_type , any                       >>();
+            return new Options(design_type);
         },
         target: decorator.target<{}>(),
     });

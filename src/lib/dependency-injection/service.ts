@@ -93,10 +93,10 @@ export default function (
 
     const service_decorator = decorator.create_class_decorator({
         init_by: (
+            ctx,
             value: string | di.Token | di.SERVICE_FACTORY,
-            [ constructor ]
         ) => {
-            let options = new ServiceDecoratorOption(constructor);
+            let options = new ServiceDecoratorOption(ctx.args[0]);
 
             if      ( typeof value == 'string'   ) options.name    = value;
             else if ( typeof value == 'function' ) options.factory = value;

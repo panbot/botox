@@ -40,30 +40,28 @@ const create = <
     target_as: typram.Typram<TARGET_AS>,
     registry_factory_type: RFT,
 ) => <
-    INITIAL_VALUES,
+    INIT_PARAMETERS extends any[],
     FIELDS extends {},
     TARGET extends Object,
     _REPLACED_TARGET extends Object = REPLACE_TARGET<DT, TARGET, TARGET_AS>,
 >(options: {
     init_by: (
-        values: INITIAL_VALUES,
-        decorator_args: REPLACE_PARAMS<DT, _REPLACED_TARGET, PROPERTY_TYPES[RFT]>,
-        design_type: any,
+        decorator_context: {
+            args: REPLACE_PARAMS<DT, _REPLACED_TARGET, PROPERTY_TYPES[RFT]>,
+            design_type: any,
+        },
+        ...init_args: INIT_PARAMETERS
     ) => FIELDS,
     target?: typram.Typram<TARGET>,
 }) => {
-    let factory = (values: INITIAL_VALUES) => {
+    let factory = (...init_args: INIT_PARAMETERS) => {
         let works: ((o: FIELDS) => void)[] = [];
 
         let decorator = (...args: ACTUAL_DECORATOR_PARAMS<DT>) => {
             let fields = options.init_by(
-                values,
-                args as any,
-                design_type_getters[decorator_type](...args),
+                { args: args as any, design_type: design_type_getters[decorator_type](...args) },
+                ...init_args
             );
-
-            if (typeof values == 'function') values(fields);
-            else Object.assign(fields, values);
 
             works.forEach(work => work(fields));
 

@@ -1,5 +1,5 @@
 import decorator from "@/lib/decorator";
-import { CONSTRUCTOR, IS } from "@/lib/types";
+import { CONSTRUCTOR, IS, MAYBE } from "@/lib/types";
 import * as asserts from "stories/asserts";
 
 class Options {
@@ -7,13 +7,21 @@ class Options {
 }
 
 const class_decorator = decorator.create_class_decorator({
-    init_by: (target, ...args) => {
-        asserts.assert_true<IS<typeof target, CONSTRUCTOR<{}>>>();
-        asserts.assert_true<IS<typeof args  , []>>();
-        return new Options();
+    init_by: (
+        ctx,
+        values?: Options,
+    ) => {
+        asserts.assert_true<IS<
+            typeof ctx["args"] , [ CONSTRUCTOR<{}> ]
+        >>();
+        return Object.assign(new Options(), values);
     },
     target: decorator.target<{}>(),
 });
+
+asserts.assert_true<IS<
+    Parameters<typeof class_decorator>[0] , Options | undefined
+>>()
 
 {
     type T = typeof class_decorator["get_registry"];
