@@ -1,13 +1,13 @@
 import di from '@/lib/dependency-injection';
 
-const Container = di();
+const container = di();
 
 class FailedInjection {
 
     constructor(
-        @Container.Inject()
+        @container.inject()
         public str: Function,
     ) { }
 }
 
-Container.instantiate(FailedInjection);
+container.instantiate(FailedInjection);

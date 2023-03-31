@@ -1,19 +1,9 @@
 import "reflect-metadata";
-import { IS, MAYBE, typram } from "./types";
+import { MAYBE, typram } from "./types";
 import aop from './aop/injective';
 
 type KEY<T = unknown> = typram.Typram<T>;
 const key = typram.factory<any>();
-
-export interface Reflection<T> {
-    readonly key: KEY<T>
-    readonly target: Object
-    readonly property: MAYBE<PropertyKey>
-    get(): MAYBE<T>
-    get_own(): MAYBE<T>
-    set(value: T): void
-    get_or_set(v: T): T
-}
 
 type SCHEME = (target: any, property?: any) => [ t: any, p?: any ]
 
@@ -47,7 +37,7 @@ namespace inventory {
 
     export type PROPERTY_CALLBACK<P, T> = (
         property: P,
-        registry_factory: () => Reflection<T>,
+        registry_factory: () => metadata_registry.Reflection<T>,
     ) => void
     export const for_each_property = <
         T,
@@ -87,10 +77,10 @@ const factory = <T>(
             this.set(v);
             return v;
         },
-    } satisfies Reflection<T>
+    } satisfies metadata_registry.Reflection<T>
 }
 
-export const get_factory_key = Symbol();
+const { before } = aop();
 const factory_factory = <
     ARGS extends [ target: Object, property?: MAYBE<PropertyKey> ],
 >(
@@ -110,10 +100,22 @@ const factory_factory = <
 
     return registry;
 }, {
-    [get_factory_key]() { return key }
+    [metadata_registry.get_factory_key]() { return key }
 });
 
-const { before } = aop();
+export namespace metadata_registry {
+    export const get_factory_key = Symbol();
+
+    export interface Reflection<T> {
+        readonly key: KEY<T>
+        readonly target: Object
+        readonly property: MAYBE<PropertyKey>
+        get(): MAYBE<T>
+        get_own(): MAYBE<T>
+        set(value: T): void
+        get_or_set(v: T): T
+    }
+}
 
 export default {
 

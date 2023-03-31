@@ -1,30 +1,30 @@
 import di from '@/lib/dependency-injection';
-import { Constructor } from '@/lib/types';
+import { CONSTRUCTOR } from '@/lib/types';
 
-const Container = di();
+const container = di();
 
-const injectSound = (sound: string) => Container.createInject(() => sound);
+const inject_sound = (sound: string) => container.create_inject(() => sound);
 
 interface CanMakeSound {
-    makeSound(): void;
+    make_sound(): void;
 }
 
-function withConstructorParameters() {
+function with_constructor_parameters() {
 
-    abstract class Animal {
+    abstract class Animal implements CanMakeSound {
 
         constructor(
             private sound: string,
         ) { }
 
-        makeSound() {
+        make_sound() {
             console.log(this.constructor.name, 'making sound is like', `"${this.sound}"`);
         }
     }
 
     class Dog extends Animal {
         constructor(
-            @injectSound('woof')
+            @inject_sound('woof')
             sound: string,
         ) {
             super(sound);
@@ -33,7 +33,7 @@ function withConstructorParameters() {
 
     class SmallDog extends Dog {
         constructor(
-            @injectSound('arf')
+            @inject_sound('arf')
             sound: string,
         ) {
             super(sound);
@@ -43,24 +43,24 @@ function withConstructorParameters() {
     return [ Dog, SmallDog ]
 }
 
-function withProtecedMemberProperties() {
+function with_protected_member_properties() {
 
-    abstract class Animal {
+    abstract class Animal implements CanMakeSound {
 
         protected abstract sound: string;
 
-        makeSound() {
+        make_sound() {
             console.log(this.constructor.name, 'making sound is like', `"${this.sound}"`);
         }
     }
 
     class Dog extends Animal {
-        @injectSound('woof')
+        @inject_sound('woof')
         protected sound!: string;
     }
 
     class SmallDog extends Dog {
-        @injectSound('arf')
+        @inject_sound('arf')
         declare protected sound: string;
 
     }
@@ -68,11 +68,11 @@ function withProtecedMemberProperties() {
     return [ Dog, SmallDog ]
 }
 
-function test(ctors: Constructor<CanMakeSound>[]) {
+function test(ctors: CONSTRUCTOR<CanMakeSound>[]) {
     for (let c of ctors) {
-        Container.instantiate(c).makeSound();
+        container.instantiate(c).make_sound();
     }
 }
 
-test(withConstructorParameters());
-test(withProtecedMemberProperties());
+test(with_constructor_parameters());
+test(with_protected_member_properties());

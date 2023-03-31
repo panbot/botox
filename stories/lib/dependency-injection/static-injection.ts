@@ -1,10 +1,10 @@
 import di from '@/lib/dependency-injection';
-const Container = di();
+const container = di();
 
 class Service {}
 
 class MyClass {
-    @Container.Inject()
+    @container.inject()
     static service: Service;
 }
 

@@ -1,6 +1,9 @@
-export type CONSTRUCTOR<T> = new (...args: any[]) => T
+export type CONSTRUCTOR<T = any> = new (...args: any[]) => T
 
-export type INSTANTIATOR = <T>(type: CONSTRUCTOR<T>) => T
+export type INSTANTIATOR = <T>(
+    type: CONSTRUCTOR<T>,
+    args?: ConstructorParameters<CONSTRUCTOR<T>>,
+) => T
 
 export type MAYBE<T> = T | undefined | null;
 

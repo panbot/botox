@@ -1,12 +1,12 @@
 import di from '@/lib/dependency-injection';
 
-const Container = di();
+const container = di();
 
 type AppParameters = {
     env: string,
 }
-let token = Container.token<AppParameters>('app parameters');
-Container.set(
+let token = container.token<AppParameters>('app parameters');
+container.set(
     token,
     {
         env: 'dev',
@@ -15,9 +15,11 @@ Container.set(
 
 const InjectParam = (
     retrieve: (p: AppParameters) => any,
-) => Container.createInject(
+) => container.create_inject(
     get => retrieve(get(token))
 );
+
+const t = InjectParam(p => p.env);
 
 class Service {
 
@@ -29,5 +31,5 @@ class Service {
     }
 }
 
-Container.instantiate(Service).doSth('hello world');
+container.instantiate(Service).doSth('hello world');
 

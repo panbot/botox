@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import mr, { get_factory_key, Reflection } from "./metadata-registry";
+import mr, { metadata_registry } from "./metadata-registry";
 import expandify from "./expandify";
 import { CONSTRUCTOR, IS, MAYBE, REMOVE_HEAD, typram } from "./types";
 
@@ -97,7 +97,7 @@ const create = <
             decorator_type,
             typram<FIELDS>(),
             typram<PROPERTY_TYPES[RFT]>(),
-            get_registry[get_factory_key](),
+            get_registry[metadata_registry.get_factory_key](),
         ),
 
         decorator: typram<DECORATORS[DT]>(),
@@ -194,10 +194,10 @@ function inventory_factory<
 }
 
 type SETTER_REGISTRY_FACTORY<T> = {
-    class     : (target: any                        ) => Reflection<T>
-    property  : (target: any, property : PropertyKey) => Reflection<T>
-    method    : (target: any, property : PropertyKey) => Reflection<T>
-    parameter : (target: any, property?: PropertyKey) => Reflection<T[]>
+    class     : (target: any                        ) => metadata_registry.Reflection<T>
+    property  : (target: any, property : PropertyKey) => metadata_registry.Reflection<T>
+    method    : (target: any, property : PropertyKey) => metadata_registry.Reflection<T>
+    parameter : (target: any, property?: PropertyKey) => metadata_registry.Reflection<T[]>
 }
 
 type SETTER<
@@ -220,14 +220,15 @@ const decorator_setters: {
 const design_type_getters: {
     [ P in DECORATOR_TYPE ]: (...args: ACTUAL_DECORATOR_PARAMS<P>) => any
 } = {
-    class     : (         ) => undefined,
+    class     : (         ) => undefined as never,
     property  : ( t, p    ) => Reflect.getMetadata('design:type'      , t, p),
     method    : (         ) => undefined, // @TODO: get parameters and return types
     parameter : ( t, p, i ) => Reflect.getMetadata('design:paramtypes', t, p)[i],
 }
 
 type IS_READONLY<T, K extends keyof T> = IS<
-    {          [ P in K ]: T[K] },
+    {          [ P in K ]: T[K] }
+    ,
     { readonly [ P in K ]: T[K] }
 > extends true ? true : false
 type NON_READONLY<T> = {

@@ -1,7 +1,7 @@
 import di from '@/lib/dependency-injection';
-import { Constructor } from '@/lib/types';
+import { CONSTRUCTOR } from '@/lib/types';
 
-const Container = di();
+const container = di();
 
 interface HasName {
     name: { toString(): string };
@@ -10,21 +10,21 @@ interface HasName {
 function injectBy(x: any) {
     class A implements HasName {
 
-        @Container.Inject(x)
+        @container.inject(x)
         name!: string;
     }
     return A;
 }
 
-function test(c: Constructor<HasName>) {
-    console.log('inject by ' + Container.instantiate(c).name);
+function test(c: CONSTRUCTOR<HasName>) {
+    console.log('inject by ' + container.instantiate(c).name);
 }
 
-Container.set('name', 'string');
+container.set('name', 'string');
 test(injectBy('name'));
 
-let token = Container.token('name');
-Container.set(token, 'token');
+let token = container.token('name');
+container.set(token, 'token');
 test(injectBy(token));
 
 class Factory {
@@ -41,7 +41,7 @@ function injectByType() {
 
     class A implements HasName {
 
-        @Container.Inject()
+        @container.inject()
         name!: Type;
     }
     return A;
