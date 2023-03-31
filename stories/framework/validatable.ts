@@ -7,7 +7,7 @@ Validatable({
     inputype: 'text',
 })(String);
 
-Validatable.fromParser(
+Validatable.from_parser(
     Number
 ).validater(
     parsed => isNaN(parsed) ? 'not a number'
@@ -21,7 +21,7 @@ Validatable({
     inputype: 'checkbox'
 })(Boolean);
 
-Validatable.fromParser(
+Validatable.from_parser(
     input => {
         switch (typeof input) {
             case 'string': case 'number': return new Date(input);
@@ -37,18 +37,18 @@ Validatable.fromParser(
     'datetime-local'
 )(Date);
 
-Validatable.fromParser(
+Validatable.from_parser(
     input => typeof input == 'string' && new URL(input),
 )(URL);
 
-console.log(Validatable.get(Number)?.validate('5'));
+console.log(Validatable.validate('5', Number));
 
 try {
-    Validatable.get(Number)?.validate('a');
+    Validatable.validate('a', Number);
 } catch (e) { console.error(e) };
 
-Validatable.get(URL)?.validate('scheme://domain');
+Validatable.validate('scheme://domain', URL);
 
 try {
-    Validatable.get(URL)?.validate('a');
+    Validatable.validate('a', URL);
 } catch (e) { console.error(e) };

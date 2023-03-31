@@ -87,7 +87,7 @@ export default function (
     function create_injectors() {
         let constructor_parameter = decorator.create_parameter_decorator.constructor({
             init_by: (
-                { args: [ target, _, index ], design_type },
+                { args: [ target, _property, index ], design_type },
                 service: di.INJECT_SERVICE,
             ) => create_injection(service, { type: 'constructor_parameter', target, index, design_type }),
             target: decorator.target<Object>(),
