@@ -2,26 +2,21 @@ import decorator_factory, { decorator } from "../lib/decorator";
 import expandify from "../lib/expandify";
 import { metadata_registry } from "../lib/metadata-registry";
 import { CONSTRUCTOR } from "../lib/types";
-
-export interface Validatable<T = any> {
-    parser: (input: unknown) => T;
-    validater?: (parsed: T) => string | undefined | false;
-    inputype?: HTML_INPUT_TYPE;
-}
+import { botox_api_framework as botox } from "./types";
 
 export default () => decorator_factory.create_class_decorator({
     init_by: (
         _ctx,
-        values: Validatable,
+        values: botox.VALIDATABLE,
     ) => values,
     target: decorator_factory.target<{}>(),
 })[expandify.expand](d => {
     const get = (target: CONSTRUCTOR<any>) => d[metadata_registry.get_registry](target).get();
 
-    function validate<T>(input: unknown, against_validatable: Validatable<T>): T
+    function validate<T>(input: unknown, against_validatable: botox.VALIDATABLE<T>): T
     function validate<T>(input: unknown, against_type: CONSTRUCTOR<T>): T
-    function validate(input: unknown, against: Validatable | CONSTRUCTOR) {
-        let v: Validatable;
+    function validate(input: unknown, against: botox.VALIDATABLE | CONSTRUCTOR) {
+        let v: botox.VALIDATABLE;
         if (typeof against == 'function') {
             let found = get(against);
             if (!found) throw new Error(`${against.name} is not validatable`);
@@ -44,26 +39,8 @@ export default () => decorator_factory.create_class_decorator({
         validate,
         from_parser: <T>(
             parser: (input: unknown) => T,
-        ) => d({ parser } as Validatable<T>) as decorator.DECORATOR<ClassDecorator, Validatable<T>>,
+        ) => d(
+            { parser } as botox.VALIDATABLE<T>
+        ) as decorator.DECORATOR<ClassDecorator, botox.VALIDATABLE<T>>,
     }
 })
-
-export type HTML_INPUT_TYPE
-    = 'checkbox'
-    | 'date'
-    | 'datetime-local'
-    | 'email'
-    | 'file'
-    | 'hidden'
-    | 'image'
-    | 'month'
-    | 'number'
-    | 'password'
-    | 'radio'
-    | 'range'
-    | 'tel'
-    | 'text'
-    | 'time'
-    | 'url'
-    | 'week'
-;
