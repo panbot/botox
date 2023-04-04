@@ -43,33 +43,11 @@ export namespace class_as_api {
     })
 }
 
-type METHODS<O> = keyof {
-    [ P in keyof O as O[P] extends (...args: any) => any ? P : never ] : any
-}
-
-type _ = METHODS<{
-    a(): void
-    b: () => {},
-    c: string,
-    d: number
-}>
-
-declare function invoke<API>(api: API): <K extends keyof API>(method: K) => API[K] extends (args: any) => any ? ReturnType<API[K]> : never;
-
-let r = invoke({
-    a() {},
-    b: () => 5,
-    c: 'str',
-    d: 4,
-})('b')
-
-
-
 export namespace method_as_api {
     export function factory(
         register: (api: CONSTRUCTOR<any>, method: PropertyKey) => void,
         instantiate: INSTANTIATOR,
-        invoke: (api: any, method: PropertyKey) => any,
+        invoke: <T, K extends keyof T>(api: T, method: K) => T[K] extends (...args: any) => infer U ? U : never,
         api_arg: parameter_as_arg.API_ARG,
         validatable: validatable.VALIDATABLE,
     ) {
@@ -86,7 +64,7 @@ export namespace method_as_api {
 
             invoke: <API>(
                 api: CONSTRUCTOR<API>,
-                property: PropertyKey,
+                property: keyof API,
                 parameters: any,
             ) => {
                 let instance = instantiate(api);
