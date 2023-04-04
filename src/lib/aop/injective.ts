@@ -1,20 +1,20 @@
 import desctructive from "./desctructive";
-import { ADVICES } from "./factory";
+import types from "./types";
 
 export default function () {
     const aop = desctructive();
 
     return {
-        before: create("before"),
-        after: create("after"),
-        around: create("around"),
+        before : create( "before" ),
+        after  : create( "after"  ),
+        around : create( "around" ),
     }
 
     type PARAMETERS = {
-        [ K in keyof ADVICES ]: Parameters<ADVICES[K]>
+        [ K in keyof types.ADVICES ]: Parameters<types.ADVICES[K]>
     }
 
-    function create<ADVICE extends keyof ADVICES>(
+    function create<ADVICE extends keyof types.ADVICES>(
         advice: ADVICE,
     ) {
         return (

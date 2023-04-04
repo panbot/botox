@@ -2,6 +2,9 @@ import "reflect-metadata";
 import decorator from "@/lib/decorator";
 import { CONSTRUCTOR, IS, MAYBE } from "@/lib/types";
 import * as asserts from "stories/asserts";
+import mr from '@/lib/metadata-registry';
+
+import gr = mr.get_registry;
 
 class Options {
     constructor(
@@ -23,7 +26,7 @@ class Options {
         },
         target: decorator.target<{}>(),
     });
-    type GET_REGISTRY_PARAMETERS = Parameters<typeof parameter_decorator["get_registry"]>;
+    type GET_REGISTRY_PARAMETERS = Parameters<typeof parameter_decorator[typeof gr]>;
     asserts.assert_true< IS<GET_REGISTRY_PARAMETERS[0], EXPECTED> >();
 }
 
@@ -41,7 +44,7 @@ class Options {
         },
         target: decorator.target<{}>(),
     });
-    type GET_REGISTRY_PARAMETERS = Parameters<typeof d["get_registry"]>;
+    type GET_REGISTRY_PARAMETERS = Parameters<typeof d[typeof gr]>;
     asserts.assert_true< IS<GET_REGISTRY_PARAMETERS[0], EXPECTED> >();
 
     class DummyTarget {
@@ -52,7 +55,7 @@ class Options {
     }
 
     let instance = new DummyTarget();
-    let registry = d.get_registry(instance, 'some_method');
+    let registry = d[gr](instance, 'some_method');
     let keys = Reflect.getMetadataKeys(instance, 'some_method');
     console.log(keys);
     console.log(registry.key == keys[3]);
@@ -74,7 +77,7 @@ class Options {
         },
         target: decorator.target<{}>(),
     });
-    type GET_REGISTRY_PARAMETERS = Parameters<typeof static_method_parameter_decorator["get_registry"]>;
+    type GET_REGISTRY_PARAMETERS = Parameters<typeof static_method_parameter_decorator[typeof gr]>;
     asserts.assert_true< IS<GET_REGISTRY_PARAMETERS[0], EXPECTED> >();
     asserts.assert_true< IS<GET_REGISTRY_PARAMETERS[1], PropertyKey> >();
 
@@ -96,14 +99,14 @@ class Options {
         }
     }
 
-    let registry = static_method_parameter_decorator.get_registry(Target, 'method');
+    let registry = static_method_parameter_decorator[gr](Target, 'method');
     let args = registry.get_own();
     asserts.assert_true< IS<typeof args, MAYBE<Options[]>> >();
     console.log(args);
 
-    console.log(static_method_parameter_decorator.get_registry(Target, 'method2').get_own());
-    console.log(static_method_parameter_decorator.get_registry(AnotherTarget, 'method').get_own());
-    console.log(static_method_parameter_decorator.get_registry(AnotherTarget, 'method2').get_own());
+    console.log(static_method_parameter_decorator[gr](Target, 'method2').get_own());
+    console.log(static_method_parameter_decorator[gr](AnotherTarget, 'method').get_own());
+    console.log(static_method_parameter_decorator[gr](AnotherTarget, 'method2').get_own());
 
 }
 
@@ -121,7 +124,7 @@ class Options {
         },
         target: decorator.target<{}>(),
     });
-    type GET_REGISTRY_PARAMETERS = Parameters<typeof dec["get_registry"]>;
+    type GET_REGISTRY_PARAMETERS = Parameters<typeof dec[typeof gr]>;
 
     class DummyTarget {
         constructor(
@@ -129,7 +132,7 @@ class Options {
         ) { }
     }
 
-    let registry = dec.get_registry(DummyTarget);
+    let registry = dec[gr](DummyTarget);
     let options = registry.get();
     asserts.assert_true< IS<typeof options, MAYBE<Options[]> >>();
 }

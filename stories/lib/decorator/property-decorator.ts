@@ -2,6 +2,9 @@ import "reflect-metadata";
 import decorator from "@/lib/decorator";
 import { CONSTRUCTOR, IS, MAYBE } from "@/lib/types";
 import * as asserts from "stories/asserts";
+import mr from '@/lib/metadata-registry';
+import gr = mr.get_registry;
+import gp = mr.get_properties;
 
 class Options {
     constructor(
@@ -23,7 +26,7 @@ class Options {
         },
         target: decorator.target<{}>(),
     });
-    type GET_REGISTRY_PARAMETERS = Parameters<typeof dec["get_registry"]>;
+    type GET_REGISTRY_PARAMETERS = Parameters<typeof dec[typeof gr]>;
     asserts.assert_true< IS<GET_REGISTRY_PARAMETERS[0], EXPECTED> >();
 }
 
@@ -40,7 +43,7 @@ class Options {
         },
         target: decorator.target<{}>(),
     });
-    type GET_REGISTRY_PARAMETERS = Parameters<typeof dec["get_registry"]>;
+    type GET_REGISTRY_PARAMETERS = Parameters<typeof dec[typeof gr]>;
     asserts.assert_true< IS<GET_REGISTRY_PARAMETERS[0], EXPECTED> >();
 
     class DummyTarget {
@@ -48,9 +51,9 @@ class Options {
         static some_string_property: string;
     }
 
-    console.log(dec.get_registry(DummyTarget, 'some_string_property').get_own());
+    console.log(dec[gr](DummyTarget, 'some_string_property').get_own());
 
-    let properties = dec.get_properties(DummyTarget);
+    let properties = dec[gr][gp](DummyTarget);
     console.log(properties.get().has('some_string_property'));
     properties.for_each((p, gr) => {
         console.log(p, gr().get(), gr().get_own());
@@ -70,7 +73,7 @@ class Options {
         },
         target: decorator.target<{}>(),
     });
-    type GET_REGISTRY_PARAMETERS = Parameters<typeof dec["get_registry"]>;
+    type GET_REGISTRY_PARAMETERS = Parameters<typeof dec[typeof gr]>;
     asserts.assert_true< IS<GET_REGISTRY_PARAMETERS[0], EXPECTED> >();
 
     class DummyTarget {
@@ -84,14 +87,14 @@ class Options {
     let key = Reflect.getMetadataKeys(new DummyTarget(), 'some_string_property')[1];
 
     {
-        let registry = dec.get_registry(new DummyTarget(), 'some_string_property');
+        let registry = dec[gr](new DummyTarget(), 'some_string_property');
         console.log(registry.key === key);
         console.log(registry.get_own());
         console.log(registry.get());
     }
 
     {
-        let properties = dec.get_properties(new DummyTarget());
+        let properties = dec[gr][gp](new DummyTarget());
         console.log(properties.get().has('some_string_property'));
         properties.for_each((p, gr) => {
             console.log(p, gr().get(), gr().get_own());

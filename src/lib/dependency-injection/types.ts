@@ -1,7 +1,6 @@
-import { decorator } from "../decorator";
-import { CONSTRUCTOR, MAYBE, typram } from "../types";
+import { CONSTRUCTOR, MAYBE } from "../types";
 
-export namespace dependency_injection {
+namespace dependency_injection_types {
 
     export class Token<T = any> {
         #t!: T;
@@ -68,16 +67,6 @@ export namespace dependency_injection {
         get_service: () => any,
     }
 
-    export type INJECTOR
-        = 'constructor_parameter'
-        | 'static_property'
-        | 'instance_property'
-    ;
-
-    export type DECORATOR_OF_INJECTOR<
-        I extends { [decorator.decorator]: typram.Typram<any> }
-    > = I[typeof decorator.decorator] extends typram.Typram<infer D> ? D : never
-
     export type INJECT_SERVICE = MAYBE<string | Token | ( () => CONSTRUCTOR ) | SERVICE_KEY>
 
     export type EVENT_HANDLERS = {
@@ -88,3 +77,5 @@ export namespace dependency_injection {
     export type EVENT = keyof EVENT_HANDLERS
 
 }
+
+export default dependency_injection_types;

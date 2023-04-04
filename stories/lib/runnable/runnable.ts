@@ -1,21 +1,25 @@
-import factory, { RunArgFactory, Runnable } from "@/lib/runnable";
+import runnable from "@/lib/runnable";
+import { IS } from "@/lib/types";
+import { assert_true } from "stories/asserts";
 
 async function testRun() {
 
+    type Runnable<T> = runnable.Runnable<T>
+
     const {
         run,
-        RunArg,
-    } = factory(c => new c);
+        run_arg,
+    } = runnable(c => new c);
 
-    class RunArgFactory1 implements RunArgFactory {
-        async produceRunArgFor(r: Runnable, arg1: string, arg2: number) {
+    class RunArgFactory1 implements runnable.RunArgFactory {
+        async produce_run_arg(r: runnable.Runnable, arg1: string, arg2: number) {
             return {
                 arg1,
                 arg2,
             }
         }
 
-        async aroundRun<T>(run: () => Promise<T>, r: Runnable<T>): Promise<T> {
+        async around_run<T>(r: runnable.Runnable<T>, run: () => Promise<T>): Promise<T> {
             console.log('RunArgFactory1 before run');
             let result = await run();
             console.log('RunArgFactory1 after run');
@@ -23,15 +27,15 @@ async function testRun() {
         }
     }
 
-    class RunArgFactory2 implements RunArgFactory {
-        async produceRunArgFor(r: Runnable, arg1: string, arg2: number) {
+    class RunArgFactory2 implements runnable.RunArgFactory {
+        async produce_run_arg(r: runnable.Runnable, arg1: string, arg2: number) {
             return {
                 arg1,
                 arg2,
             }
         }
 
-        async aroundRun<T>(run: () => Promise<T>, r: Runnable<T>): Promise<T> {
+        async around_run<T>(r: runnable.Runnable<T>, run: () => Promise<T>): Promise<T> {
             console.log('RunArgFactory2 before run');
             let result = await run();
             console.log('RunArgFactory2 after run');
@@ -39,11 +43,11 @@ async function testRun() {
         }
     }
 
-    class A implements Runnable {
+    class A implements runnable.Runnable {
 
-        async run(
-            @RunArg(RunArgFactory1, 'hello', 1) runArg1: Awaited<ReturnType<RunArgFactory1["produceRunArgFor"]>>,
-            @RunArg(RunArgFactory2, 'world', 2) runArg2: Awaited<ReturnType<RunArgFactory2["produceRunArgFor"]>>,
+        async [runnable.run](
+            @run_arg(RunArgFactory1, 'hello', 1) runArg1: Awaited<ReturnType<RunArgFactory1["produce_run_arg"]>>,
+            @run_arg(RunArgFactory2, 'world', 2) runArg2: Awaited<ReturnType<RunArgFactory2["produce_run_arg"]>>,
         ) {
             console.log('inside A::run()');
             console.log('runArg1', runArg1);
@@ -55,6 +59,8 @@ async function testRun() {
 
     let a = new A();
     let result = await run(a);
+
+    assert_true<IS< typeof result, string >>();
 
     console.log(result);
 

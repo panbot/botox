@@ -1,43 +1,7 @@
 import { CONSTRUCTOR, INSTANTIATOR, REMOVE_HEAD, REQUIRED_KEY } from "./types";
 import mr from './metadata-registry';
 
-export namespace runnable {
-
-    export const run = Symbol();
-
-    export interface Runnable<T = unknown> {
-        [run](...args: any[]): Promise<T>;
-    }
-
-    export interface RunArgFactory<RunArg = unknown> {
-
-        produce_run_arg(for_runnable: Runnable, ...args: any): Promise<RunArg>;
-
-        release_run_arg?(for_runnable: Runnable): Promise<void>;
-
-        around_run?<T>(for_runnable: Runnable<T>, invoke: () => Promise<T>): Promise<T>;
-    }
-
-}
-
-type GET_PRODUCER_ARGS<
-    T extends runnable.RunArgFactory
-> = REMOVE_HEAD<Parameters<T['produce_run_arg']>>;
-
-type RUN_ARG<
-    T extends runnable.RunArgFactory = runnable.RunArgFactory
-> = {
-    index: number,
-    Factory: CONSTRUCTOR<T>,
-    args: GET_PRODUCER_ARGS<T>,
-};
-
-type Arounder = REQUIRED_KEY<runnable.RunArgFactory, "around_run">;
-function is_arounder(factory: runnable.RunArgFactory): factory is Arounder {
-    return factory.around_run != null;
-}
-
-export default function (
+function runnable(
     instantiate: INSTANTIATOR,
 ) {
     const get_registry = mr.property_factory(false)(mr.create_key<RUN_ARG[]>());
@@ -50,9 +14,9 @@ export default function (
             ...args: GET_PRODUCER_ARGS<T>
         ) => <U>(
             proto: runnable.Runnable<U>,
-            method: string,
+            method: PropertyKey,
             index: number,
-        ) => get_registry(proto, method).get_or_set([]).push({ index, Factory, args }),
+        ) => void get_registry(proto, method).get_or_set([]).push({ index, Factory, args }),
     }
 
     async function run<T>(
@@ -101,4 +65,42 @@ export default function (
             await Promise.all(releasing.map(r => r()));
         }
     }
+}
+
+namespace runnable {
+
+    export const run = Symbol();
+
+    export interface Runnable<T = unknown> {
+        [run](...args: any[]): Promise<T>;
+    }
+
+    export interface RunArgFactory<RunArg = unknown> {
+
+        produce_run_arg(for_runnable: Runnable, ...args: any): Promise<RunArg>;
+
+        release_run_arg?(for_runnable: Runnable): Promise<void>;
+
+        around_run?<T>(for_runnable: Runnable<T>, invoke: () => Promise<T>): Promise<T>;
+    }
+
+}
+
+export default runnable;
+
+type GET_PRODUCER_ARGS<
+    T extends runnable.RunArgFactory
+> = REMOVE_HEAD<Parameters<T['produce_run_arg']>>;
+
+type RUN_ARG<
+    T extends runnable.RunArgFactory = runnable.RunArgFactory
+> = {
+    index: number,
+    Factory: CONSTRUCTOR<T>,
+    args: GET_PRODUCER_ARGS<T>,
+};
+
+type Arounder = REQUIRED_KEY<runnable.RunArgFactory, "around_run">;
+function is_arounder(factory: runnable.RunArgFactory): factory is Arounder {
+    return factory.around_run != null;
 }

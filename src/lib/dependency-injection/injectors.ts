@@ -2,13 +2,13 @@ import decorator from "../decorator";
 import expandify from "../expandify";
 import { MapMap } from "../map-map";
 import { CONSTRUCTOR, MAYBE } from "../types";
-import { dependency_injection as di } from "./types";
-import { metadata_registry as mr } from "../metadata-registry";
+import types from "./types";
+import mr from "../metadata-registry";
 
 export default function (
-    get_by_service_key: (service_key: di.SERVICE_KEY) => any,
+    get_by_service_key: (service_key: types.SERVICE_KEY) => any,
 ) {
-    let injection_events: di.INJECTION[] = [];
+    let injection_events: types.INJECTION[] = [];
     let injectors = create_injectors();
 
     const routes = new MapMap<
@@ -27,9 +27,9 @@ export default function (
     return {
         ...injectors,
 
-        route:  (
-            service: MAYBE<di.INJECT_SERVICE>,
-            args: Parameters<di.INJECTION_DECORATOR>,
+        route: (
+            service: MAYBE<types.INJECT_SERVICE>,
+            args: Parameters<types.INJECTION_DECORATOR>,
         ) => {
             let [ target, property, index ] = args;
 
@@ -40,14 +40,14 @@ export default function (
             );
             if (!injector) throw new Error(
                 'unsupported injection point',
-                { cause: { target, property, index }}
+                { cause: { target, property, index } }
             );
 
-            injector(service)(...args as Parameters<di.DECORATOR_OF_INJECTOR<typeof injector>>);
+            injector(service)(...args as [ any, any, any]);
         },
 
         drain_injection_events: (
-            handlers: di.EVENT_HANDLERS["injection"][],
+            handlers: types.EVENT_HANDLERS["injection"][],
         ) => {
             while (injection_events.length) {
                 let i = injection_events.shift()!;
@@ -56,11 +56,11 @@ export default function (
         },
     };
 
-    function create_injection<P extends di.POINT>(
-        service: di.INJECT_SERVICE,
+    function create_injection<P extends types.POINT>(
+        service: types.INJECT_SERVICE,
         point: P,
     ) {
-        let injection: di.INJECTION<P> = {
+        let injection: types.INJECTION<P> = {
             point,
             get_service: () => get_by_service_key(create_service_key()),
         };
@@ -68,7 +68,7 @@ export default function (
 
         return injection;
 
-        function create_service_key(): di.SERVICE_KEY {
+        function create_service_key(): types.SERVICE_KEY {
             if (!service) {
                 assert_not_built_in(point.design_type);
                 return { type: 'class', class: point.design_type };
@@ -76,7 +76,7 @@ export default function (
                 return { type: 'class', class: service() };
             } else if (typeof service == 'string') {
                 return { type: 'name', name: service };
-            } else if (service instanceof di.Token) {
+            } else if (service instanceof types.Token) {
                 return { type: 'token', token: service };
             } else {
                 return service;
@@ -88,7 +88,7 @@ export default function (
         let constructor_parameter = decorator.create_parameter_decorator.constructor({
             init_by: (
                 { args: [ target, _property, index ], design_type },
-                service: di.INJECT_SERVICE,
+                service: types.INJECT_SERVICE,
             ) => create_injection(service, { type: 'constructor_parameter', target, index, design_type }),
             target: decorator.target<Object>(),
         })[expandify.expand](d => ({
@@ -104,7 +104,7 @@ export default function (
         let instance_property = decorator.create_property_decorator.instance({
             init_by: (
                 { args: [ target, property ], design_type },
-                service: di.INJECT_SERVICE,
+                service: types.INJECT_SERVICE,
             ) => create_injection(service, { type: 'instance_property', target, property, design_type }),
             target: decorator.target<Object>(),
         })[expandify.expand](d => ({
@@ -121,7 +121,7 @@ export default function (
         let static_property = decorator.create_property_decorator.static({
             init_by: (
                 { args: [ target, property ], design_type },
-                service: di.INJECT_SERVICE,
+                service: types.INJECT_SERVICE,
             ) => create_injection(service, { type: 'static_property', target, property, design_type }),
             target: decorator.target<Object>(),
         })[expandify.expand](d => ({

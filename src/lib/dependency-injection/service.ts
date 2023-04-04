@@ -1,14 +1,14 @@
 import decorator from "../decorator";
 import expandify from "../expandify";
 import { CONSTRUCTOR, INSTANTIATOR } from "../types";
-import { dependency_injection as di } from "./types";
-import { metadata_registry as mr } from "../metadata-registry";
+import types from "./types";
+import mr from "../metadata-registry";
 
 export default function (
     instantiate: INSTANTIATOR,
 ) {
     type TARGET = Object;
-    type INSTANCE_KEY = string | di.Token | CONSTRUCTOR;
+    type INSTANCE_KEY = string | types.Token | CONSTRUCTOR;
     let names = new Map<string, CONSTRUCTOR<TARGET>>();
     let instances = new Map<INSTANCE_KEY, any>();
 
@@ -16,7 +16,7 @@ export default function (
         let constructor = names.get(name);
         return constructor && by_class(constructor)
     });
-    const by_token = create_get_by((token: di.Token) => {
+    const by_token = create_get_by((token: types.Token) => {
         if (!token.services.length) not_found(token.toString());
 
         return token.multiple
@@ -32,7 +32,7 @@ export default function (
     });
 
     const by_get_class = ( get_class : () => CONSTRUCTOR  ) => by_class(get_class());
-    const by_factory   = ( factory   : di.SERVICE_FACTORY ) => factory (get_service);
+    const by_factory   = ( factory   : types.SERVICE_FACTORY ) => factory (get_service);
 
     const getters = {
         by_name,
@@ -41,7 +41,7 @@ export default function (
         by_get_class,
         by_factory,
 
-        by_service_key(service_key: di.SERVICE_KEY) {
+        by_service_key(service_key: types.SERVICE_KEY) {
             switch (service_key.type) {
                 case 'name'      : return by_name      (service_key.name       )
                 case 'token'     : return by_token     ( service_key.token     )
@@ -54,17 +54,17 @@ export default function (
         },
     };
 
-    const get_service: di.GET_SERVICE = (service_key: INSTANCE_KEY | di.SERVICE_KEY) => {
+    const get_service: types.GET_SERVICE = (service_key: INSTANCE_KEY | types.SERVICE_KEY) => {
         if      ( typeof service_key == 'string'   ) return getters.by_name (service_key)
         else if ( typeof service_key == 'function' ) return getters.by_class(service_key)
-        else if ( service_key instanceof di.Token  ) return getters.by_token(service_key)
+        else if ( service_key instanceof types.Token  ) return getters.by_token(service_key)
 
         return getters.by_service_key(service_key);
     }
 
     const set_service: {
         (name: string, instance: any): void
-        <T>(token: di.Token<T>, instance: T): void
+        <T>(token: types.Token<T>, instance: T): void
         <T>(constructor: CONSTRUCTOR<T>, instance: T): void
     } = (k: any, v: any) => void instances.set(k, v);
 
@@ -79,16 +79,16 @@ export default function (
             names.set(v, this.type);
         }
 
-        #token?: di.Token;
+        #token?: types.Token;
         get token() { return this.#token }
-        set token(v: di.Token | undefined) {
+        set token(v: types.Token | undefined) {
             this.#token = v;
             if (!v) return;
 
             v.services.push(this.type);
         }
 
-        public factory?: di.SERVICE_FACTORY;
+        public factory?: types.SERVICE_FACTORY;
 
         constructor (
             public type: CONSTRUCTOR<TARGET>,
@@ -98,13 +98,13 @@ export default function (
     const service_decorator = decorator.create_class_decorator({
         init_by: (
             ctx,
-            value: string | di.Token | di.SERVICE_FACTORY,
+            value: string | types.Token | types.SERVICE_FACTORY,
         ) => {
             let options = new ServiceDecoratorOption(ctx.args[0]);
 
             if      ( typeof value == 'string'   ) options.name    = value;
             else if ( typeof value == 'function' ) options.factory = value;
-            else if ( value instanceof di.Token  ) options.token   = value;
+            else if ( value instanceof types.Token  ) options.token   = value;
 
             return options;
         },

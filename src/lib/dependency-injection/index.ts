@@ -1,15 +1,15 @@
 import { CONSTRUCTOR } from '../types';
 import create_injectors from './injectors';
 import create_service from './service';
-import { dependency_injection as di } from './types';
+import types from './types';
 
-export default function () {
+export default function dependency_injection() {
     const service = create_service(instantiate);
     const get = service.get_service;
     const injectors = create_injectors(get.by_service_key);
 
     const event_handlers: {
-        [ P in di.EVENT ]: di.EVENT_HANDLERS[P][]
+        [ P in types.EVENT ]: types.EVENT_HANDLERS[P][]
     } = {
         instantiated: [],
         injection: [
@@ -22,9 +22,9 @@ export default function () {
     let instantiation_loop = new Map<CONSTRUCTOR<any>, any>();
 
     const inject = (
-        service?: di.INJECT_SERVICE
+        service?: types.INJECT_SERVICE
     ) => (
-        ...args: Parameters<di.INJECTION_DECORATOR>
+        ...args: Parameters<types.INJECTION_DECORATOR>
     ) => {
         injectors.route(service, args);
         injectors.drain_injection_events(event_handlers.injection);
@@ -34,7 +34,7 @@ export default function () {
         create_token: <T>(
             description: string,
             multiple?: boolean,
-        ) => new di.Token<T>(description, !!multiple),
+        ) => new types.Token<T>(description, !!multiple),
 
         get,
         set: service.set_service,
@@ -45,12 +45,12 @@ export default function () {
 
         inject,
         create_inject: (
-            factory: di.SERVICE_FACTORY,
+            factory: types.SERVICE_FACTORY,
         ) => inject({ type: 'factory', factory }),
 
-        on: <E extends di.EVENT>(
+        on: <E extends types.EVENT>(
             event: E,
-            handler: di.EVENT_HANDLERS[E]
+            handler: types.EVENT_HANDLERS[E]
         ) => event_handlers[event].push(handler),
     }
 

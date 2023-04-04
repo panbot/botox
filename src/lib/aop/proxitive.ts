@@ -1,19 +1,19 @@
-import mr, { metadata_registry } from '../metadata-registry';
-import aop_factory, { ADVISED } from './factory';
+import mr from '../metadata-registry';
+import aop_factory from './factory';
+import types from './types';
 
 export default (
     use: (proxifier: (object: any) => any) => any,
 ) => {
-    const key = mr.create_key<ADVISED[]>();
     const get_registry = mr.property_factory(true)(
-        mr.create_key<ADVISED[]>(),
+        mr.create_key<types.ADVISED[]>(),
         (t, p) => [ t[p as keyof typeof t] ]
     );
 
     use((target: any) => {
         let proxy = Object.create(target);
 
-        get_registry[metadata_registry.get_properties](target).for_each(
+        get_registry[mr.get_properties](target).for_each(
             (p, gr) => proxy[p] = gr().get()?.reduce(
                 (pv, cv) => aop_factory.apply_advised(cv, pv),
                 target[p]

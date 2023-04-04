@@ -1,5 +1,6 @@
 import decorator from "@/lib/decorator";
-import { CONSTRUCTOR, IS, MAYBE } from "@/lib/types";
+import mr from "@/lib/metadata-registry";
+import { CONSTRUCTOR, IS } from "@/lib/types";
 import * as asserts from "stories/asserts";
 
 class Options {
@@ -24,7 +25,7 @@ asserts.assert_true<IS<
 >>()
 
 {
-    type T = typeof class_decorator["get_registry"];
+    type T = typeof class_decorator[typeof mr.get_registry];
     asserts.assert_true  <IS<Parameters<T>[0], CONSTRUCTOR<{}>>>();
     asserts.assert_false <IS<Parameters<T>[0], {}>>();
 }
@@ -39,4 +40,4 @@ class Target2 {
 
 }
 
-console.log(class_decorator.get_registry(Target).get()?.name);
+console.log(class_decorator[mr.get_registry](Target).get()?.name);
