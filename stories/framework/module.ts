@@ -1,25 +1,42 @@
 import factory from '@/framework/module';
+import { CONSTRUCTOR } from '@/lib/types';
 
-let Module = factory();
+interface Module {
+    init?(): Promise<void>
+}
 
-@Module({
-    name: 'my module',
-})
+namespace btx {
+    export const module = factory(
+        (ctor: CONSTRUCTOR<Module>) => {
+
+        }
+    );
+}
+
+import module = btx.module;
+
+@module()
 export class MyModule {
 
 }
-console.log(Module.getOptions(MyModule));
+console.log(module.get_options(MyModule));
 
-@Module(o => {
-    o.dependencies = () => [ MyModule3 ];
-}).name('my module 2')
+@module({
+    dependencies: () => [ MyModule3 ],
+})
 export class MyModule2 {
 
 }
-console.log(Module.getOptions(MyModule2));
+console.log(module.get_options(MyModule2));
 
-@Module().dependencies(() => [ MyModule ])
+@module(
+).dependencies(
+    () => [ MyModule ]
+).controllers([
+
+])
 export class MyModule3 {
 
 }
-console.log(Module.getOptions(MyModule3));
+console.log(module.get_options(MyModule3));
+

@@ -1,21 +1,24 @@
 import decorator from "../lib/decorator";
 import expandify from "../lib/expandify";
-import { metadata_registry } from "../lib/metadata-registry";
+import mr from "../lib/metadata-registry";
 import { CONSTRUCTOR } from "../lib/types";
-import { botox_api_framework as botox } from "./types";
+import types from "./types";
 
-export default <MODULE extends {}>(
+import OPTIONS = types.MODULE_OPTIONS;
+
+export default
+<MODULE extends {}>(
     register: (constructor: CONSTRUCTOR<MODULE>) => void,
 ) => decorator.create_class_decorator({
     init_by: (
         ctx,
-        module_options?: botox.MODULE_OPTIONS<MODULE>,
-    ) => ( register(ctx.args[0]), module_options || {} as botox.MODULE_OPTIONS<MODULE>),
+        module_options?: OPTIONS<MODULE>,
+    ) => ( register(ctx.args[0]), module_options || {} as OPTIONS<MODULE>),
     target: decorator.target<MODULE>(),
 })[expandify.expand]({
 
     get_options(module: CONSTRUCTOR<MODULE>) {
-        return this[metadata_registry.get_registry](module).get_own()
+        return this[mr.get_registry](module).get_own()
     },
 
     resolve_dependencies(modules: CONSTRUCTOR<MODULE>[]) {
