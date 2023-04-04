@@ -1,35 +1,33 @@
 import { isPromise } from 'node:util/types';
 import aop from './aop'
 
-const _create_loggers = <
-    LOG extends (args: any) => void,
-    LEVELS extends Record<PropertyKey, logging.LEVEL>,
->(
-    logger: LOG,
-    levels: LEVELS,
-    level: logging.LEVEL,
-) => record_map(
-    levels,
-    (_k, v) => v < level
-        ? (() => {}) as unknown as LOG
-        : logger
-);
+namespace logging {
+    export type LEVEL = number;
 
-function _create_decorators<
-    LEVELS extends Record<PropertyKey, logging.LEVEL>,
->(
-    after: aop.AOP["after"],
-    levels: LEVELS,
-    level: logging.LEVEL,
-) {
-    const null_decorator = (
-        callback: (error: any, result: any) => void,
-    ) => after(p => {});
-
-    return record_map(
+    export const create_loggers = <
+        LOG extends (args: any) => void,
+        LEVELS extends Record<PropertyKey, logging.LEVEL>,
+    >(
+        logger: LOG,
+        levels: LEVELS,
+        level: logging.LEVEL,
+    ) => record_map(
         levels,
         (_k, v) => v < level
-            ?   null_decorator
+            ? (() => {}) as unknown as LOG
+            : logger
+    );
+
+    export const create_decorators = <
+        LEVELS extends Record<PropertyKey, logging.LEVEL>,
+    >(
+        after: aop.AOP["after"],
+        levels: LEVELS,
+        level: logging.LEVEL,
+    ) => record_map(
+        levels,
+        (_k, v) => v < level
+            ?   () => () => {}
             :   (
                     callback: (error: any, result: any) => void,
                 ) => after(p => {
@@ -45,13 +43,6 @@ function _create_decorators<
                     }
                 })
     )
-}
-
-namespace logging {
-    export type LEVEL = number;
-
-    export const create_loggers = _create_loggers;
-    export const create_decorators = _create_decorators;
 }
 
 export default logging;

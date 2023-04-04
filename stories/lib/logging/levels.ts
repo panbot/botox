@@ -33,6 +33,12 @@ const level = 2;
         levels,
         level,
     );
+    assert_true<IS<
+        typeof decorators,
+        {
+            [ P in keyof typeof levels]: (callback: (error: any, result: any) => void) => MethodDecorator
+        }
+    >>();
 
 
     class MyService {
