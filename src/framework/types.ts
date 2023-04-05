@@ -50,7 +50,7 @@ namespace botox_framework_types {
         [ P in keyof T as T[P] extends (...args: any) => any ? P : never ]: any
     }
 
-    export type METHOD_INVOKER =<
+    export type METHOD_INVOKER = <
         T,
         K extends METHODS<T>,
         ARGS extends T[K] extends (...args: infer U) => any ? U : never

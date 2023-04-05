@@ -6,10 +6,10 @@ import expandify from "../../lib/expandify";
 import botox_property_as_arg from "../api-arg/property-as-arg";
 import validatable from "../validatable";
 
-function botox_class_as_api(
-    register: (api: CONSTRUCTOR<any>) => void,
+function botox_class_as_api<API extends {}, R>(
+    register: (api: CONSTRUCTOR<API>) => void,
     instantiate: INSTANTIATOR,
-    invoke: (api: any) => any,
+    invoke: (api: any) => R,
     api_arg: botox_property_as_arg.API_ARG,
     validatable: validatable.VALIDATABLE,
 ) { return decorator.create_class_decorator({
@@ -19,12 +19,13 @@ function botox_class_as_api(
     ) => {
         register(ctx.args[0]);
         return options || {} satisfies OPTIONS;
-    }
+    },
+    target: decorator.target<API>(),
 })[expandify.expand]({
 
     invoke: <API>(
         api: CONSTRUCTOR<API>,
-        parameters: any,
+        parameters?: any,
     ) => {
         let instance = instantiate(api);
         api_arg.for_each_arg(

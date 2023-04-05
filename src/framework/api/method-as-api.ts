@@ -6,8 +6,8 @@ import expandify from "../../lib/expandify";
 import botox_parameter_as_arg from "../api-arg/parameter-as-arg";
 import validatable from "../validatable";
 
-function botox_method_as_api(
-    register: (api: CONSTRUCTOR<any>, method: PropertyKey) => void,
+function botox_method_as_api<API extends {}>(
+    register: (api: CONSTRUCTOR<API>, method: PropertyKey) => void,
     instantiate: INSTANTIATOR,
     invoke: types.METHOD_INVOKER,
     api_arg: botox_parameter_as_arg.API_ARG,
@@ -18,10 +18,10 @@ function botox_method_as_api(
             ctx,
             options?: OPTIONS
         ) => {
-            register(ctx.args[0].constructor, ctx.args[1]);
+            register(ctx.args[0].constructor as CONSTRUCTOR<API>, ctx.args[1]);
             return options || {} satisfies OPTIONS;
         },
-        target: decorator.target<any>(),
+        target: decorator.target<API>(),
     })[expandify.expand]({
 
         invoke: <

@@ -11,10 +11,6 @@ export function assert_type<X>() {
     function satisfies< Y extends SATISFY<X, Y> >() {}
     function satisfies_typeof<Y extends SATISFY<X, Y>>(y: Y) {}
 
-    function is<Y>(y: Y) {
-        type _ = IS<X, Y>
-    }
-
     return {
         can_be_satisfied_by,
         satisfies,

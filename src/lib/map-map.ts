@@ -6,16 +6,22 @@ export class MapMap<KEYS extends any[], VALUE> {
 
     get(...keys: KEYS) {
         let key = keys.pop();
-        let map = this.get_map(keys as unknown as REMOVE_TAIL<KEYS>);
-        return map?.get(key) as MAYBE<VALUE>;
+        let map = this.map;
+        while (keys.length) {
+            let key = keys.shift();
+            let next = map.get(key);
+            if (!next) return;
+            map = next;
+        }
+        return map.get(key) as MAYBE<VALUE>;
     }
 
-    set(...args: [ ...KEYS, VALUE ]) {
-        let value = args.pop() as VALUE;
-        let keys = args as unknown as KEYS;
-
+    set(...args: [ ...keys: KEYS, value: VALUE ]) {
+        let value: any = args.pop();
+        let keys: any[] = args;
+        let key = keys.pop();
         let map = this.map;
-        while (keys.length > 1) {
+        while (keys.length) {
             let key = keys.shift();
             let next = map.get(key);
             if (!next) {
@@ -24,19 +30,22 @@ export class MapMap<KEYS extends any[], VALUE> {
             }
             map = next;
         }
-        map.set(keys[0], value);
+        map.set(key, value);
 
         return this;
     }
 
-    get_map(keys: REMOVE_TAIL<KEYS>) {
-        let map = this.map;
-        while (keys.length) {
-            let key = keys.shift();
-            let next = map.get(key);
-            if (!next) return;
-            map = next;
-        }
-        return map;
+    has(...keys: PARTIAL_KEY<KEYS>) {
+
     }
 }
+
+type PARTIAL_KEY<KEY>
+    = KEY extends []
+    ? never
+    : KEY extends [ infer U ]
+    ? [ U ]
+    : KEY extends [ ...infer V, infer W ]
+    ? [ ...V, W ] | PARTIAL_KEY<V>
+    : never
+;

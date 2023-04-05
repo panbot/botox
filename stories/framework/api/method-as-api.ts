@@ -1,6 +1,7 @@
 import botox_parameter_as_arg from "@/framework/api-arg/parameter-as-arg";
 import botox_method_as_api from "@/framework/api/method-as-api";
 import botox_validatable_factory from "@/framework/validatable";
+import { assert_of_type } from "stories/asserts";
 const btx_validatable = botox_validatable_factory();
 
 const btx_api_arg = botox_parameter_as_arg(btx_validatable);
@@ -23,10 +24,13 @@ class MyApi {
         arg1: string,
     ) {
         console.log('hello, %s!', arg1);
+
+        return 0;
     }
 }
 
-btx_api.invoke(MyApi, 'my_method', [ 'world' ]);
+let r = btx_api.invoke(MyApi, 'my_method', [ 'world' ]);
+assert_of_type<number>(r);
 
 () => {
     //@ts-expect-error
