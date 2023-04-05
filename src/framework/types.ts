@@ -1,6 +1,6 @@
 import { CONSTRUCTOR } from "../lib/types";
 
-namespace botox_api_framework_types {
+namespace botox_framework_types {
 
     export type MODULE_OPTIONS<MODULE extends {}> = {
         dependencies?: () => CONSTRUCTOR<MODULE>[],
@@ -17,7 +17,7 @@ namespace botox_api_framework_types {
         optional?: boolean,
         default?: any,
         priority?: number,
-        validatable?: VALIDATABLE_OPTIONS,
+        validatable: VALIDATABLE_OPTIONS,
     }
 
     export type VALIDATABLE_OPTIONS<T = any> = {
@@ -45,6 +45,20 @@ namespace botox_api_framework_types {
         | 'url'
         | 'week'
     ;
+
+    export type METHODS<T> = keyof {
+        [ P in keyof T as T[P] extends (...args: any) => any ? P : never ]: any
+    }
+
+    export type METHOD_INVOKER =<
+        T,
+        K extends METHODS<T>,
+        ARGS extends T[K] extends (...args: infer U) => any ? U : never
+    >(
+        t: T,
+        k: K,
+        args: ARGS
+    ) => T[K] extends (...args: any) => infer U ? U : never
 }
 
-export default botox_api_framework_types
+export default botox_framework_types

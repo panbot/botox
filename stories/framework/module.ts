@@ -1,42 +1,23 @@
-import factory from '@/framework/module';
-import { CONSTRUCTOR } from '@/lib/types';
+import botox_module_factory from "@/framework/module";
+import { CONSTRUCTOR } from "@/lib/types";
 
 interface Module {
     init?(): Promise<void>
 }
 
-namespace btx {
-    export const module = factory(
-        (ctor: CONSTRUCTOR<Module>) => {
+const btx_module = botox_module_factory(
+    (module: CONSTRUCTOR<Module>) => {
 
-        }
-    );
-}
+    }
+);
 
-import module = btx.module;
+@btx_module().apis([
 
-@module()
-export class MyModule {
+]).controllers([
 
-}
-console.log(module.get_options(MyModule));
-
-@module({
-    dependencies: () => [ MyModule3 ],
-})
-export class MyModule2 {
-
-}
-console.log(module.get_options(MyModule2));
-
-@module(
-).dependencies(
-    () => [ MyModule ]
-).controllers([
+]).dependencies(() => [
 
 ])
-export class MyModule3 {
+class MyModule {
 
 }
-console.log(module.get_options(MyModule3));
-

@@ -6,10 +6,9 @@ import types from "./types";
 
 import OPTIONS = types.MODULE_OPTIONS;
 
-export default
-<MODULE extends {}>(
+function botox_module_factory<MODULE extends {}>(
     register: (constructor: CONSTRUCTOR<MODULE>) => void,
-) => decorator.create_class_decorator({
+) { return decorator.create_class_decorator({
     init_by: (
         ctx,
         module_options?: OPTIONS<MODULE>,
@@ -50,4 +49,10 @@ export default
 
         return sorted;
     }
-})
+}) }
+
+namespace botox_module_factory {
+    export type MODULE = ReturnType<typeof botox_module_factory>
+}
+
+export default botox_module_factory
