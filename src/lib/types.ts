@@ -34,3 +34,12 @@ export namespace typram {
         #t!: T
     }
 }
+
+export type FALSY
+    = false
+    | 0
+    | 0n
+    | null
+    | undefined
+    | void
+;

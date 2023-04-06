@@ -17,10 +17,10 @@ function botox_validatable_factory() { return decorator.create_class_decorator({
     const get = (type: CONSTRUCTOR<any>) => d[mr.get_registry](type).get();
 
     function validate<T>(input: unknown, options: OPTIONS<T>): T {
-        const { parser, validater } = options;
+        const { parser, validator } = options;
 
         let parsed = parser(input);
-        let error = validater?.(parsed);
+        let error = validator?.(parsed);
         if (error) throw new TypeError(error, { cause: { input } });
 
         return parsed;

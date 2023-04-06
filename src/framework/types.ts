@@ -1,4 +1,4 @@
-import { CONSTRUCTOR } from "../lib/types";
+import { CONSTRUCTOR, FALSY } from "../lib/types";
 
 namespace botox_framework_types {
 
@@ -22,7 +22,7 @@ namespace botox_framework_types {
 
     export type VALIDATABLE_OPTIONS<T = any> = {
         parser: (input: unknown) => T;
-        validater?: (parsed: T) => string | undefined | false;
+        validator?: (parsed: T) => string | FALSY;
         inputype?: HTML_INPUT_TYPE;
     }
 

@@ -17,7 +17,7 @@ validate_type('str', String);
 
 btx_validatable.from_parser(
     Number
-).validater(
+).validator(
     parsed => isNaN(parsed) ? 'not a number'
                             : undefined,
 ).inputype(
@@ -47,7 +47,7 @@ btx_validatable.from_parser(
         }
         if (input instanceof Date) return input;
     }
-).validater(
+).validator(
     parsed => {
         let s = parsed?.toString();
         return s == 'Invalid Date' && s
