@@ -45,7 +45,6 @@ function botox_validatable_factory() { return decorator.create_class_decorator({
 }) }
 
 namespace botox_validatable_factory {
-    export type OPTIONS = types.VALIDATABLE_OPTIONS;
     export type VALIDATABLE = ReturnType<typeof botox_validatable_factory>;
 }
 

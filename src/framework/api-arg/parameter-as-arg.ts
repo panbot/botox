@@ -27,7 +27,6 @@ function botox_parameter_as_arg(
 }) }
 
 namespace botox_parameter_as_arg {
-
     export type API_ARG = ReturnType<typeof botox_parameter_as_arg>;
 }
 

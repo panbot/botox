@@ -4,14 +4,6 @@ import { ApiLookup } from "./services/api-lookup";
 import botox from "./botox";
 import { CONSTRUCTOR } from "@/lib/types";
 
-function my_decorator<T>(
-    cb: (target: T) => {},
-) {
-    return function (target: T, property: PropertyKey) {
-        cb(target);
-    }
-}
-
 class CallApi implements runnable.Runnable {
 
     @botox.api_arg().validatable({
