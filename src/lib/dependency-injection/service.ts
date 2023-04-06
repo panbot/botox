@@ -63,9 +63,9 @@ export default function (
     }
 
     const set_service: {
-        (name: string, instance: any): void
-        <T>(token: types.Token<T>, instance: T): void
-        <T>(constructor: CONSTRUCTOR<T>, instance: T): void
+           (name       :         string, instance: any): void
+        <T>(token      : types.Token<T>, instance: T  ): void
+        <T>(constructor: CONSTRUCTOR<T>, instance: T  ): void
     } = (k: any, v: any) => void instances.set(k, v);
 
     class ServiceDecoratorOption {

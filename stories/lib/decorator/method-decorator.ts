@@ -2,6 +2,9 @@ import "reflect-metadata";
 import decorator from "@/lib/decorator";
 import { CONSTRUCTOR, IS } from "@/lib/types";
 import * as asserts from "stories/asserts";
+import mr from '@/lib/metadata-registry';
+import gr = mr.get_registry;
+import gp = mr.get_properties;
 
 class Options {
     constructor(
@@ -26,7 +29,7 @@ class Options {
         },
         target: decorator.target<{}>(),
     });
-    type GET_REGISTRY_PARAMETERS = Parameters<typeof dec["get_registry"]>;
+    type GET_REGISTRY_PARAMETERS = Parameters<typeof dec[typeof gr]>;
     asserts.assert_true< IS<GET_REGISTRY_PARAMETERS[0], EXPECTED> >();
 }
 
@@ -46,7 +49,7 @@ class Options {
         },
         target: decorator.target<{}>(),
     });
-    type GET_REGISTRY_PARAMETERS = Parameters<typeof dec["get_registry"]>;
+    type GET_REGISTRY_PARAMETERS = Parameters<typeof dec[typeof gr]>;
     asserts.assert_true< IS<GET_REGISTRY_PARAMETERS[0], EXPECTED> >();
 }
 
@@ -66,6 +69,6 @@ class Options {
         },
         target: decorator.target<{}>(),
     });
-    type GET_REGISTRY_PARAMETERS = Parameters<typeof dec["get_registry"]>;
+    type GET_REGISTRY_PARAMETERS = Parameters<typeof dec[typeof gr]>;
     asserts.assert_true< IS<GET_REGISTRY_PARAMETERS[0], EXPECTED> >();
 }

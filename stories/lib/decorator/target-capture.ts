@@ -1,5 +1,6 @@
 import { IS } from "@/lib/types";
 import { assert_true } from "stories/asserts";
+import "reflect-metadata";
 
 function d1<T, K extends PropertyKey>(
     cb: (target: T, property: K) => void,
@@ -32,4 +33,7 @@ class A {
         assert_true<IS<typeof this.target, A>>();
     })
     p: string;
+
+
+    m: Map<string, number>;
 }
