@@ -4,27 +4,24 @@ import mr from "../lib/metadata-registry";
 import { CONSTRUCTOR } from "../lib/types";
 import types from "./types";
 
-import OPTIONS = types.MODULE_OPTIONS;
-
-function botox_module_factory<MODULE extends {}>(
-    register: (constructor: CONSTRUCTOR<MODULE>) => void,
+function botox_module_factory<OPTIONS extends types.MODULE_OPTIONS>(
+    init_by: (constructor: CONSTRUCTOR, options?: OPTIONS) => OPTIONS,
 ) { return decorator.create_class_decorator({
     init_by: (
         ctx,
-        module_options?: OPTIONS<MODULE>,
-    ) => ( register(ctx.args[0]), module_options || {} as OPTIONS<MODULE>),
-    target: decorator.target<MODULE>(),
+        options?: OPTIONS,
+    ) => init_by(ctx.args[0], options),
 })[expandify.expand]({
 
-    get_options(module: CONSTRUCTOR<MODULE>) {
+    get_options(module: CONSTRUCTOR) {
         return this[mr.get_registry](module).get_own()
     },
 
-    resolve_dependencies(modules: CONSTRUCTOR<MODULE>[]) {
-        let visited = new Set<CONSTRUCTOR<MODULE>>();
+    resolve_dependencies(modules: CONSTRUCTOR[]) {
+        let visited = new Set<CONSTRUCTOR>();
         const visit = (
-            module: CONSTRUCTOR<MODULE>,
-            path = new Set<CONSTRUCTOR<MODULE>>()
+            module: CONSTRUCTOR,
+            path = new Set<CONSTRUCTOR>()
         ) => {
             if (visited.has(module)) return;
 
@@ -36,14 +33,14 @@ function botox_module_factory<MODULE extends {}>(
             let options = this.get_options(module);
             if (!options) throw new Error(`module options not found`, { cause: { module } });
             options.dependencies?.().forEach(
-                dep => visit(dep, new Set<CONSTRUCTOR<MODULE>>(path))
+                dep => visit(dep, new Set<CONSTRUCTOR>(path))
             );
 
             sorted.push(module);
             visited.add(module);
         }
 
-        let sorted: CONSTRUCTOR<MODULE>[] = [];
+        let sorted: CONSTRUCTOR[] = [];
 
         modules.forEach(m => visit(m));
 
@@ -52,7 +49,6 @@ function botox_module_factory<MODULE extends {}>(
 }) }
 
 namespace botox_module_factory {
-    export type MODULE = ReturnType<typeof botox_module_factory>
 }
 
 export default botox_module_factory

@@ -38,8 +38,8 @@ const create = <
 ) => <
     INIT_PARAMETERS extends any[],
     FIELDS extends {},
-    TARGET extends Object,
-    _REPLACED_TARGET extends Object = REPLACE_TARGET<DT, TARGET, TARGET_AS>,
+    TARGET_TYPE extends Object,
+    _REPLACED_TARGET extends Object = REPLACE_TARGET<DT, TARGET_TYPE, TARGET_AS>,
 >(options: {
     init_by: (
         decorator_context: {
@@ -48,12 +48,21 @@ const create = <
         },
         ...init_args: INIT_PARAMETERS
     ) => FIELDS,
-    target?: typram.Typram<TARGET>,
+    target?: typram.Typram<TARGET_TYPE>,
 }) => {
-    let factory = (...init_args: INIT_PARAMETERS) => {
+
+    const get_registry = registry_factory(
+        typram<_REPLACED_TARGET>(),
+        typram<FIELDS>(),
+        registry_factory_type,
+    );
+
+    let factory = <TARGET>(...init_args: INIT_PARAMETERS) => {
         let works: ((o: FIELDS) => void)[] = [];
 
-        let decorator = (...args: ACTUAL_DECORATOR_PARAMS<DT>) => {
+        // let decorator = (...args: ACTUAL_DECORATOR_PARAMS<DT>) => {
+        let decorator = (target: TARGET, ...other_args: REMOVE_HEAD<ACTUAL_DECORATOR_PARAMS<DT>>) => {
+            let args: ACTUAL_DECORATOR_PARAMS<DT> = [ target, ...other_args ] as any;
             let fields = options.init_by(
                 { args: args as any, design_type: design_type_getters[decorator_type](...args) },
                 ...init_args
@@ -70,18 +79,11 @@ const create = <
 
         return new Proxy(decorator, {
             get: (_, k, r) => (v: any) => {
-                // @TODO: check if k is keyof fields
                 works.push(o => o[k as keyof FIELDS] = v);
                 return r;
             }
-        }) as decorator.DECORATOR<DECORATORS[DT], FIELDS>
+        }) as decorator.DECORATOR<DT, FIELDS>
     }
-
-    const get_registry = registry_factory(
-        typram<_REPLACED_TARGET>(),
-        typram<FIELDS>(),
-        registry_factory_type,
-    );
 
     return expandify(factory)[expandify.expand]({
 
@@ -230,9 +232,23 @@ const target_types = {
 
 namespace decorator {
 
-    export type DECORATOR<D, T> = D & Required<{
-        [ P in keyof NON_READONLY<T> ]: (v: T[P]) => DECORATOR<D, T>
-    }>;
+    const this_type_is_target = Symbol();
+    export interface THIS_TYPE_IS_TARGET { [this_type_is_target]?: any }
+
+    export type DECORATOR<DT extends DECORATOR_TYPE, O> = DECORATORS[DT] & {
+        [ P in keyof NON_READONLY<Required<O>> ]: O[P] extends THIS_TYPE_IS_TARGET
+            ? <T>(v: O[P] & ThisType<T>) => GENERIC_TYPE_DECORATORS<T>[DT]
+            : (v: O[P]) => DECORATOR<DT, O>
+    };
+
+    type GENERIC_TYPE_DECORATORS<T> = {
+        class     :     (target: T) => void
+        property  :  (target: T, property: PropertyKey) => void
+        method    :    <D>(target: T, property: string | symbol, descriptor: TypedPropertyDescriptor<D>) => TypedPropertyDescriptor<D> | void
+        parameter : (target: T, property: string | symbol | undefined, index: number) => void;
+
+        optional_property: OPTIONAL_PROPERTY_DECORATOR,
+    };
 
     export const create_class_decorator    = create('class'            , target_types.constructor, 'class'             );
     export const create_prototype_property = create('optional_property', target_types.either     , 'prototype_property');
@@ -254,6 +270,12 @@ namespace decorator {
         static_method: create('parameter', target_types.constructor, 'method_parameter'     ), } );
 
     export const target = typram.factory();
+
+    export const helpers = {
+        registry_factory,
+        decorator_setters,
+        design_type_getters,
+    }
 }
 
 export default decorator;

@@ -34,6 +34,64 @@ class A {
     })
     p: string;
 
+}
 
-    m: Map<string, number>;
+function d4<T>() {
+    return Object.assign(function (target: T, property: PropertyKey) {}, {
+
+        parser: <T>(v: (this: T, v: any) => void) => {
+
+            return function (target: T, property: PropertyKey) {}
+        },
+
+        validator: <T>(v: { validator: (v: any) => any } & ThisType<T>) => {
+            return function (target: T, property: PropertyKey) {}
+        }
+    })
+}
+
+class B {
+
+    @d4().parser(function () {
+        this.p
+    })
+    @d4().validator({
+        validator(v) {
+            this.p
+        }
+    })
+    p: string;
+}
+
+type d5_options = {
+    parser: (v: any) => void,
+    validator: { validator: (v: any) => void },
+}
+
+type BIND<F, T> = F extends (...args: infer U) => infer R
+    ? (this: T, ...args: U) => R
+    : F
+;
+
+type OPTION_DECORATE<O> = {
+    [ K in keyof O ]: O[K] extends (...args: infer U) => infer R
+        ? <T>(v: (this: T, ...args: U) => R) => (((target: T, proeprty: PropertyKey) => void) & OPTION_DECORATE<O>)
+        : <T>(v: O[K] & ThisType<T>) => (((target: T, proeprty: PropertyKey) => void) & OPTION_DECORATE<O>)
+}
+
+function d5<T>() {
+    return null as unknown as ((target: T, property: PropertyKey) => void) & OPTION_DECORATE<d5_options>
+}
+
+class d5_test {
+
+    @d5().parser(function () {
+        this.p
+    })
+    @d5().validator({
+        validator(v) {
+            this.p
+        }
+    })
+    p: string;
 }

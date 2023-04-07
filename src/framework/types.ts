@@ -1,11 +1,12 @@
+import decorator from "../lib/decorator";
 import { CONSTRUCTOR, FALSY } from "../lib/types";
 
 namespace botox_framework_types {
 
-    export type MODULE_OPTIONS<MODULE extends {}> = {
-        dependencies?: () => CONSTRUCTOR<MODULE>[],
-        controllers?: CONSTRUCTOR<any>[],
-        apis?: CONSTRUCTOR<any>[],
+    export type MODULE_OPTIONS = {
+        dependencies?: () => CONSTRUCTOR[],
+        controllers?: CONSTRUCTOR[],
+        apis?: CONSTRUCTOR[],
     }
 
     export type API_OPTIONS = {
@@ -13,38 +14,13 @@ namespace botox_framework_types {
     }
 
     export type API_ARG_OPTIONS = {
-        doc?: string,
-        optional?: boolean,
-        default?: any,
-        priority?: number,
-        validatable: VALIDATABLE_OPTIONS,
+        validatable: VALIDATABLE_OPTIONS & decorator.THIS_TYPE_IS_TARGET,
     }
 
     export type VALIDATABLE_OPTIONS<T = any> = {
         parser: (input: unknown) => T;
         validator?: (parsed: T) => string | FALSY;
-        inputype?: HTML_INPUT_TYPE;
     }
-
-    export type HTML_INPUT_TYPE
-        = 'checkbox'
-        | 'date'
-        | 'datetime-local'
-        | 'email'
-        | 'file'
-        | 'hidden'
-        | 'image'
-        | 'month'
-        | 'number'
-        | 'password'
-        | 'radio'
-        | 'range'
-        | 'tel'
-        | 'text'
-        | 'time'
-        | 'url'
-        | 'week'
-    ;
 
     export type METHODS<T> = keyof {
         [ P in keyof T as T[P] extends (...args: any) => any ? P : never ]: any
@@ -55,8 +31,8 @@ namespace botox_framework_types {
         K extends METHODS<T>,
         ARGS extends T[K] extends (...args: infer U) => any ? U : never
     >(
-        t: T,
-        k: K,
+        target: T,
+        method: K,
         args: ARGS
     ) => T[K] extends (...args: any) => infer U ? U : never
 }

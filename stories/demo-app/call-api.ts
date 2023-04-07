@@ -16,12 +16,12 @@ class CallApi implements runnable.Runnable {
             return module;
         }
     })
-    module: CONSTRUCTOR<botox.Api>;
+    module: CONSTRUCTOR<botox.Module>;
 
     @botox.api_arg().validatable({
-        parser: (_, ctx) => {
+        parser() {
             const api = botox.container.get(ApiLookup).get_api(
-                ctx.module,
+                this.module,
                 process.argv[3] || ''
             );
             if (!api) throw new Error('api not found');
@@ -29,7 +29,7 @@ class CallApi implements runnable.Runnable {
             return api;
         }
     })
-    api: CONSTRUCTOR<botox.Api>;
+    api: CONSTRUCTOR<runnable.Runnable>;
 
     @botox.api_arg().validatable({
         parser: () => JSON.parse(process.argv[4] || '{}')
@@ -38,8 +38,8 @@ class CallApi implements runnable.Runnable {
 
     async [runnable.run]() {
         await init_modules([ this.module ]);
-        return botox.api.invoke(this.api, this.params);
+        return botox.invoke_api(this.api, this.params);
     }
 }
 
-botox.api.invoke(CallApi).catch(e => console.error(e));
+botox.invoke_api(CallApi).catch(e => console.error(e));

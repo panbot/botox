@@ -15,12 +15,12 @@ function botox_property_as_arg(
     })
 })[expandify.expand]({
 
-    for_each_arg(
-        api: any,
-        callback: (property: PropertyKey, arg: OPTIONS) => void,
+    for_each_arg<API extends Object>(
+        api: API,
+        callback: (property: keyof API, arg: OPTIONS) => void,
     ) {
         this[mr.get_registry][mr.get_properties](api).for_each(
-            (p, gr) => callback(p, gr().get()!)
+            (p, gr) => callback(p as any, gr().get()!)
         )
     },
 }) }

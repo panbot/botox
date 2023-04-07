@@ -9,7 +9,7 @@ export class ApiLookup {
     private apis = new MapMap<[
         module: string | CONSTRUCTOR<botox.Module>,
         api: string
-    ], CONSTRUCTOR<botox.Api>>();
+    ], CONSTRUCTOR>();
 
     constructor(
         @botox.inject_token('enabled_modules')
@@ -24,7 +24,7 @@ export class ApiLookup {
         })
     }
 
-    get_api(module: string, api: string) {
+    get_api(module: string | CONSTRUCTOR<botox.Module>, api: string) {
         return this.apis.get(module, api);
     }
 
