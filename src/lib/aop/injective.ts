@@ -18,15 +18,6 @@ function injective_aop_factory() {
         after : (method: M, advice: aop_factory. AFTER_ADVICE<T, M, D>) => define_property(target, method,  after(advice)),
         around: (method: M, advice: aop_factory.AROUND_ADVICE<T, M, D>) => define_property(target, method, around(advice)),
     })
-
-    function define_property(
-        target: any, method: any,
-        decorator: aop_factory.DECORATOR<any, any, any>,
-    ) {
-        let descriptor = { value: target[method] }
-        decorator(target, method, descriptor);
-        Object.defineProperty(target, method, descriptor);
-    }
 }
 
 namespace injective_aop_factory {
@@ -34,3 +25,12 @@ namespace injective_aop_factory {
 }
 
 export default injective_aop_factory
+
+function define_property(
+    target: any, method: any,
+    decorator: aop_factory.DECORATOR<any, any, any>,
+) {
+    let descriptor = { value: target[method] }
+    decorator(target, method, descriptor);
+    Object.defineProperty(target, method, descriptor);
+}
