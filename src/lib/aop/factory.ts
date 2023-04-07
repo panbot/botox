@@ -1,53 +1,79 @@
-import "reflect-metadata";
-import types from './types';
 
 function aop_factory(
-    implement: (blueprint: types.BLUEPRINT) => void,
-) {
-    const create: (
-        shape: (p: types.POINTCUT, invoke: (p: types.POINTCUT) => any) => any
-    ) => MethodDecorator = (
-        shape,
-    ) => (
-        prototype, method, descriptor
-    ) => void implement({
-        origin: assert_is_function(descriptor.value, prototype, method),
-        advised: (invoke, target, args) => shape({ target, method, args }, invoke),
-        prototype, method, descriptor,
-    });
-
-    const extend = Object.assign;
+    installer: (
+        target: Object, method: PropertyKey, descriptor: TPD<any>,
+        replacer: aop_factory.REPLACER,
+    ) => void,
+): aop_factory.AOP {
+    const install = (
+        advice: (pointcut: any) => any,
+        target: any, method: any, descriptor: TPD<any>,
+        shape: (advise: () => any, invoke: () => any) => any
+    ) => void installer(
+        target, method, descriptor,
+        (
+            f: FUNC
+        ) => function (this: any, ...args: any) {
+            let pointcut: aop_factory.POINTCUT<any, any, any> = {
+                target, method, descriptor, args,
+                result: undefined, error: false,
+                invoke: () => f.apply(this, pointcut.args),
+            }
+            return shape(
+                () => advice(pointcut),
+                () => { try       { pointcut.result = pointcut.invoke() }
+                        catch (e) { pointcut.result = e
+                                    pointcut.error  = true              } }
+            )
+        }
+    )
 
     return {
-        before : before => create((p, invoke) =>       ( before(p),                 invoke( p )    )),
-        after  : after  => create((p, invoke) =>  after( extend(p ,    catch_error( invoke, p )  ) )),
-        around : around => create((p, invoke) => around( extend(p , { invoke: () => invoke( p ) }) )),
-    } satisfies types.ADVICES;
+        before: a => (t, m, d) => install(a, t, m, d, (advise, invoke) => (           advise(), invoke() )) ,
+        after : a => (t, m, d) => install(a, t, m, d, (advise, invoke) => ( invoke(), advise()           )) ,
+        around: a => (t, m, d) => install(a, t, m, d, (advise        ) => (           advise()           )) ,
+    }
 }
 
 namespace aop_factory {
-    export const apply_advised = (
-        advised: types.ADVISED,
-        to: Function
-    ) => function (this: any, ...args: any[]) {
-        return advised(p => to.apply(this, p.args), this, args);
+
+    export type POINTCUT<T, M, D> = {
+
+        target     : T,
+        method     : M,
+        descriptor : TPD<D>,
+
+        args:         D extends (...arg: infer U) => any ? U : never,
+        result:       D extends (...arg: any) => infer R ? R : never,
+        invoke: () => D extends (...arg: any) => infer R ? R : never,
+
+        error: boolean,
     }
-}
 
-export default aop_factory;
+    export type BEFORE_POINTCUT<T, M, D> = Omit<POINTCUT<T, M, D>, "invoke" | "result" | "error">
+    export type  AFTER_POINTCUT<T, M, D> = Omit<POINTCUT<T, M, D>, "invoke"                     >
+    export type AROUND_POINTCUT<T, M, D> = Omit<POINTCUT<T, M, D>,            "result" | "error">
 
-function assert_is_function(value: unknown, object: any, property: PropertyKey, ) {
-    if (typeof value != 'function') throw new Error('not a function', { cause: { value, object, property }});
-    return value;
-}
+    export type BEFORE_ADVICE<T, M, D> = (pointcut: BEFORE_POINTCUT<T, M, D>) => any
+    export type  AFTER_ADVICE<T, M, D> = (pointcut:  AFTER_POINTCUT<T, M, D>) => any
+    export type AROUND_ADVICE<T, M, D> = (pointcut: AROUND_POINTCUT<T, M, D>) => any
 
-function catch_error(
-    invoke: (p: types.POINTCUT) => any,
-    p: types.POINTCUT,
-) {
-    try {
-        return { result: invoke(p), error: false }
-    } catch (result) {
-        return { result, error: true }
+    export type DECORATOR<T, M, D> = (target: T, method: M, decorator: TPD<D>) => void
+
+    export type BEFORE = <T, M, D>(advice: BEFORE_ADVICE<T, M, D>) => DECORATOR<T, M, D>
+    export type  AFTER = <T, M, D>(advice:  AFTER_ADVICE<T, M, D>) => DECORATOR<T, M, D>
+    export type AROUND = <T, M, D>(advice: AROUND_ADVICE<T, M, D>) => DECORATOR<T, M, D>
+
+    export type AOP = {
+        before : BEFORE
+         after : AFTER
+        around : AROUND
     }
+
+    export type REPLACER = (f: FUNC) => FUNC
 }
+
+export default aop_factory
+
+type FUNC = (...args: any) => any
+type TPD<T> = TypedPropertyDescriptor<T>

@@ -1,3 +1,10 @@
 import aop_factory from "./factory";
 
-export default () => aop_factory(bp => bp.descriptor.value = aop_factory.apply_advised(bp.advised, bp.origin));
+function desctructive_aop_factory() {
+    return aop_factory((_, __, d, r) => d.value = r(d.value));
+}
+
+namespace desctructive_aop_factory {
+
+}
+export default desctructive_aop_factory;

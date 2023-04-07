@@ -1,34 +1,36 @@
-import desctructive from "./desctructive";
-import types from "./types";
+import botox_framework_types from "../../framework/types";
+import desctructive_aop_factory from "./desctructive";
+import aop_factory from "./factory";
 
-export default function () {
-    const aop = desctructive();
+function injective_aop_factory() {
+    const { before, after, around } = desctructive_aop_factory();
 
-    return {
-        before : create( "before" ),
-        after  : create( "after"  ),
-        around : create( "around" ),
-    }
+    return <
+        T extends Object,
+        M extends botox_framework_types.METHODS<T>,
+        ARGS extends any[] = T[M] extends (...args: infer U) => any ? U : never,
+        RESULT = T[M] extends (...args: any) => infer U ? U : never,
+        D = (...args: ARGS) => RESULT,
+    >(
+        target: T,
+    ) => ({
+        before: (method: M, advice: aop_factory.BEFORE_ADVICE<T, M, D>) => define_property(target, method, before(advice)),
+        after : (method: M, advice: aop_factory. AFTER_ADVICE<T, M, D>) => define_property(target, method,  after(advice)),
+        around: (method: M, advice: aop_factory.AROUND_ADVICE<T, M, D>) => define_property(target, method, around(advice)),
+    })
 
-    type PARAMETERS = {
-        [ K in keyof types.ADVICES ]: Parameters<types.ADVICES[K]>
-    }
-
-    function create<ADVICE extends keyof types.ADVICES>(
-        advice: ADVICE,
+    function define_property(
+        target: any, method: any,
+        decorator: aop_factory.DECORATOR<any, any, any>,
     ) {
-        return (
-            target: any,
-            method: PropertyKey,
-            ...args: PARAMETERS[ADVICE]
-        ) => {
-            let descriptor = { value: target[method] } satisfies PropertyDescriptor;
-            aop[advice](...args as [ any ])(
-                target,
-                method as any,
-                descriptor
-            )
-            Reflect.defineProperty(target, method, descriptor);
-        }
+        let descriptor = { value: target[method] }
+        decorator(target, method, descriptor);
+        Object.defineProperty(target, method, descriptor);
     }
 }
+
+namespace injective_aop_factory {
+
+}
+
+export default injective_aop_factory

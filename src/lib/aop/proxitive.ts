@@ -1,27 +1,32 @@
-import mr from '../metadata-registry';
-import aop_factory from './factory';
-import types from './types';
+import mr from '../metadata-registry'
+import aop_factory from './factory'
 
-export default (
-    use: (proxifier: (object: any) => any) => any,
-) => {
+function proxitive_aop_factory(
+    use: (proxifier: <T>(object: T) => T) => void
+) {
     const get_registry = mr.property_factory(true)(
-        mr.create_key<types.ADVISED[]>(),
+        mr.create_key<aop_factory.REPLACER[]>(),
         (t, p) => [ t[p as keyof typeof t] ]
     );
 
     use((target: any) => {
-        let proxy = Object.create(target);
+        let proxy = Object.create(target)
 
         get_registry[mr.get_properties](target).for_each(
             (p, gr) => proxy[p] = gr().get()?.reduce(
-                (pv, cv) => aop_factory.apply_advised(cv, pv),
+                (pv, cv) => cv(pv),
                 target[p]
             ) || proxy[p]
-        );
+        )
 
-        return proxy;
-    });
+        return proxy
+    })
 
-    return aop_factory(p => get_registry(p.prototype, p.method).get_or_set([]).push(p.advised));
+    return aop_factory((t, m, _d, r) => get_registry(t, m).get_or_set([]).push(r))
 }
+
+namespace proxitive_aop_factory {
+
+}
+
+export default proxitive_aop_factory

@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { MAYBE, typram } from "./types";
-import aop from './aop/injective';
+import injective_aop_factory from "./aop/injective";
 
 type KEY<T = unknown> = typram.Typram<T>;
 
@@ -79,6 +79,7 @@ const factory = <T>(
     } satisfies metadata_registry.Reflection<T>
 }
 
+const inject = injective_aop_factory();
 function metadata_registry<
     ARGS extends [ target: Object, property?: MAYBE<PropertyKey> ],
 >(
@@ -91,12 +92,10 @@ function metadata_registry<
 ) => Object.assign((...args: ARGS) => {
     let registry = factory(key, args[0], args[1], scheme as SCHEME);
 
-    if (use_inventory) aop().before(
-        registry, "set",
-        () => inventory.add_property(key, args[0], args[1]!)
-    );
+    if (use_inventory)
+        inject(registry).before('set', () => inventory.add_property(key, args[0], args[1]!))
 
-    return registry;
+    return registry
 }, {
     [metadata_registry.get_properties]: (
         target: Object

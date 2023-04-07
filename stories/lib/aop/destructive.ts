@@ -5,9 +5,9 @@ const { before, after, around } = aop();
 class Target {
 
     @before(pc => {
-        console.log('before', pc);
+        console.log('before', pc.target);
         console.log('original arguments', pc.args);
-        pc.args = pc.args.map(v => v += '(touched by before advisor)')
+        pc.args = pc.args.map((v: any) => v += '(touched by before advisor)')
     })
     test_before(...args: any) {
         console.log('inside before');
