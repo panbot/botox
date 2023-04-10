@@ -29,7 +29,7 @@ export default function (
 
         route: (
             service: MAYBE<types.INJECT_SERVICE>,
-            args: Parameters<types.INJECTION_DECORATOR>,
+            args: [ target: any, property: any, index: any ],
         ) => {
             let [ target, property, index ] = args;
 
@@ -43,7 +43,7 @@ export default function (
                 { target, property, index }
             );
 
-            injector(service)(...args as [ any, any, any]);
+            injector(service)(...args);
         },
 
         drain_injection_events: (

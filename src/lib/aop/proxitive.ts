@@ -6,7 +6,7 @@ function proxitive_aop_factory(
 ) {
     const get_registry = mr.property_factory(true)(
         mr.create_key<aop_factory.REPLACER[]>(),
-        (t, p) => [ t[p as keyof typeof t] ]
+        (t: any, p) => [ t[p] ]
     );
 
     use((target: any) => {
