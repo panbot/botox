@@ -1,4 +1,4 @@
-import { MAYBE, REMOVE_TAIL } from "./types";
+import { MAYBE } from "./types";
 
 export class MapMap<KEYS extends any[], VALUE> {
 

@@ -27,7 +27,7 @@ export default function(algorithm: hashcash.ALGORITHM = 'sha256') {
 
     const installer = decorator.create_prototype_property({
         init_by: (
-            _ctx: any,
+            _ctx,
             difficulty: number,
         ) => ({
             difficulty,
@@ -45,13 +45,13 @@ export default function(algorithm: hashcash.ALGORITHM = 'sha256') {
 
         get_provided_difficulty,
         set_provided_difficulty: (
-            request: any,
+            request: Object,
             zeros: number
         ) => get_request_registry(request).set({ zeros }),
 
         check: (
-            request: any,
-            resource: any,
+            request: Object,
+            resource: Object,
             property?: PropertyKey,
         ) => {
             let required_difficulty = get_resource_difficulty(resource, property);
@@ -65,12 +65,12 @@ export default function(algorithm: hashcash.ALGORITHM = 'sha256') {
         ) => consume_hashcash(algorithm, payload, hashcash),
     }
 
-    function get_resource_difficulty(target: any, property?: PropertyKey) {
+    function get_resource_difficulty(target: Object, property?: PropertyKey) {
         if (!property && typeof target != 'function') target = target.constructor;
         return installer[mr.get_registry](target, property).get()?.difficulty || 0;
     }
 
-    function get_provided_difficulty(request: any) {
+    function get_provided_difficulty(request: Object) {
         return get_request_registry(request).get_own()?.zeros || 0
     }
 

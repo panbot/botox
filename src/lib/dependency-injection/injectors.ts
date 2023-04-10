@@ -6,7 +6,7 @@ import types from "./types";
 import mr from "../metadata-registry";
 
 export default function (
-    get_by_service_key: (service_key: types.SERVICE_KEY) => any,
+    get_by_service_key: <T>(service_key: types.SERVICE_KEY<T>) => T,
 ) {
     let injection_events: types.INJECTION[] = [];
     let injectors = create_injectors();
@@ -71,7 +71,7 @@ export default function (
 
         return injection;
 
-        function create_service_key(): types.SERVICE_KEY {
+        function create_service_key(): types.SERVICE_KEY<unknown> {
             if (!service) {
                 return { type: 'class', class: point.design_type };
             } else if (typeof service == 'function') {

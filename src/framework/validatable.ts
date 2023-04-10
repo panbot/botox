@@ -65,7 +65,7 @@ function botox_validatable_factory() {
             return this[mr.get_registry](type).get()
         },
 
-        "get!"(type: CONSTRUCTOR<any>) {
+        "get!"(type: CONSTRUCTOR) {
             let options = this.get(type);
             if (!options) options = {
                 parser: () => { throw new TypeError('not validatable') }

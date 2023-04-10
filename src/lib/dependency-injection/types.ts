@@ -17,9 +17,9 @@ namespace dependency_injection_types {
         }
     }
 
-    export type SERVICE_FACTORY<T = any> = (get: GET_SERVICE) => T
+    export type SERVICE_FACTORY<T = unknown> = (get: GET_SERVICE) => T
 
-    export type SERVICE_KEY<T = any> = {
+    export type SERVICE_KEY<T = unknown> = {
         type: 'name',
         name: string,
     } | {
@@ -76,7 +76,7 @@ namespace dependency_injection_types {
             super(message, { cause: point });
         }
 
-        static try(cb: () => any, point: { target: any, property?: any, index?: any }) {
+        static try<T>(cb: () => T, point: { target: any, property?: any, index?: any }) {
             try {
                 return cb();
             } catch (e) {
