@@ -2,7 +2,7 @@ import { CONSTRUCTOR } from "@/lib/types";
 import botox from "../botox";
 import { MapMap } from "@/lib/map-map";
 
-
+@botox.container.service()
 export class ApiLookup {
 
     private modules = new Map<string, CONSTRUCTOR<botox.Module>>();

@@ -3,7 +3,7 @@ import create_injectors from './injectors';
 import create_service from './service';
 import types from './types';
 
-export default function dependency_injection() {
+function dependency_injection() {
     const service = create_service(instantiate);
     const get = service.get_service;
     const injectors = create_injectors(get.by_service_key);
@@ -22,12 +22,12 @@ export default function dependency_injection() {
     let instantiation_loop = new Map<CONSTRUCTOR<any>, any>();
 
     const inject: {
-        (            ): types.INJECTION_DECORATOR
-        (name: string): types.INJECTION_DECORATOR
+        <T, P extends P_EXTENDS<T>, I extends I_EXTENDS<P>>(            ): DECORATOR<T, P, I>
+        <T, P extends P_EXTENDS<T>, I extends I_EXTENDS<P>>(name: string): DECORATOR<T, P, I>
 
-        <T, P extends keyof T>(token    :       types.Token<T[P]>) : types.INJECTION_DECORATOR<T, P>
-        <T, P extends keyof T>(get_type : () => CONSTRUCTOR<T[P]>) : types.INJECTION_DECORATOR<T, P>
-        <T, P extends keyof T>(service  : types.SERVICE_KEY<T[P]>) : types.INJECTION_DECORATOR<T, P>
+        <T, P extends P_EXTENDS<T>, I extends I_EXTENDS<P>>(token    :       types.Token<TYPE<T, P, I>>) : DECORATOR<T, P, I>
+        <T, P extends P_EXTENDS<T>, I extends I_EXTENDS<P>>(get_type : () => CONSTRUCTOR<TYPE<T, P, I>>) : DECORATOR<T, P, I>
+        <T, P extends P_EXTENDS<T>, I extends I_EXTENDS<P>>(service  : types.SERVICE_KEY<TYPE<T, P, I>>) : DECORATOR<T, P, I>
      } = (
         service?: types.INJECT_SERVICE
     ) => (
@@ -52,9 +52,9 @@ export default function dependency_injection() {
 
         inject,
 
-        create_inject: <T, P extends keyof T>(
-            factory: types.SERVICE_FACTORY<T[P]>,
-        ) => (t: T, p?: P, i?: number) => void inject({ type: 'factory', factory })(t, p, i),
+        create_inject: <T, P extends P_EXTENDS<T>, I extends I_EXTENDS<P>>(
+            factory: types.SERVICE_FACTORY<TYPE<T, P, I>>,
+        ) => (t: T, p?: P, i?: I) => void inject({ type: 'factory', factory })(t, p, i),
 
         on: <E extends types.EVENT>(
             event: E,
@@ -89,3 +89,30 @@ export default function dependency_injection() {
         }
     }
 }
+
+namespace dependency_injection {
+
+    export type P_EXTENDS<T> = T extends abstract new (...args: any) => any ? undefined : any
+    export type I_EXTENDS<P> = P extends undefined ? number : undefined
+
+    type P_OF_T<P, T, O = never> = P extends keyof T ? T[P] : O
+    type ARGS_OF_T<T>
+        = T extends abstract new (...args: infer U) => any
+        ? U
+        : never
+    ;
+    export type TYPE<T, P, I> = P_OF_T<I, ARGS_OF_T<T>, P_OF_T<P, T>>
+
+    export import Token = types.Token
+}
+
+export default dependency_injection
+
+type DECORATOR<
+    T,
+    P extends P_EXTENDS<T>,
+    I extends I_EXTENDS<P>,
+> = (target: T, property?: P, index?: I) => void
+import TYPE = dependency_injection.TYPE
+import P_EXTENDS = dependency_injection.P_EXTENDS
+import I_EXTENDS = dependency_injection.I_EXTENDS

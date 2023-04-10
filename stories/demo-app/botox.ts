@@ -25,12 +25,26 @@ namespace botox {
     export const tokens = {
         enabled_modules: container.create_token<CONSTRUCTOR<Module>[]>('enabled modules'),
     }
+    type TOKENS = typeof tokens;
 
     export const { inject } = container
-    export const inject_token = (
-        token: keyof typeof tokens
-    ) => container.create_inject(
-        get => get(tokens[token])
+    export const inject_token = <
+        T,
+        P extends dependency_injection.P_EXTENDS<T>,
+        I extends dependency_injection.I_EXTENDS<P>,
+        N extends keyof {
+            [ K in keyof TOKENS as
+                TOKENS[K] extends dependency_injection.Token<infer U>
+                    ? U extends dependency_injection.TYPE<T, P, I>
+                    ? K
+                    : never
+                    : never
+            ]: any
+        } & keyof TOKENS
+    >(
+        token: N
+    ) => container.create_inject<T, P, I>(
+        get => get(tokens[token] as any)
     )
 
     export function invoke_api(

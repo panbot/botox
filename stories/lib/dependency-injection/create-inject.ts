@@ -13,9 +13,9 @@ container.set(
     }
 )
 
-const inject_param = <T, P extends keyof T>(
-    retrieve: (p: AppParameters) => T[P],
-) => container.create_inject<T, P>(get => retrieve(get(token)))
+const inject_param = <T, P extends di.P_EXTENDS<T>, I extends di.I_EXTENDS<P>>(
+    retrieve: (p: AppParameters) => di.TYPE<T, P, I>,
+) => container.create_inject<T, P, I>(get => retrieve(get(token)))
 
 class Service {
 

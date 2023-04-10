@@ -62,7 +62,10 @@ export default function (
     ) {
         let injection: types.INJECTION<P> = {
             point,
-            get_service: types.InjectionError.try(() => get_by_service_key(create_service_key()), point),
+            get_service: () => types.InjectionError.try(
+                () => get_by_service_key(create_service_key()),
+                point
+            ),
         };
         injection_events.push(injection);
 

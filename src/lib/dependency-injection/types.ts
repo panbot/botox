@@ -17,11 +17,6 @@ namespace dependency_injection_types {
         }
     }
 
-    export type INJECTION_DECORATOR<
-        T = any,
-        P extends keyof T = any,
-    > = (target: T, property?: P, index?: number) => void
-
     export type SERVICE_FACTORY<T = any> = (get: GET_SERVICE) => T
 
     export type SERVICE_KEY<T = any> = {

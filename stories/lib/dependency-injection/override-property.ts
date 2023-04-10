@@ -3,7 +3,7 @@ import { CONSTRUCTOR } from '@/lib/types';
 
 const container = di();
 
-const inject_sound = (sound: string) => container.create_inject<any, any>(() => sound);
+const inject_sound = (sound: string) => container.create_inject<any, any, any>(() => sound);
 
 interface CanMakeSound {
     make_sound(): void;
