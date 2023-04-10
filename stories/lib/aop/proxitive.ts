@@ -1,10 +1,13 @@
 import aop from '@/lib/aop/proxitive';
 import { CONSTRUCTOR } from '@/lib/types';
 
-let proxify: any;
-export const { before, after, around } = aop(p => proxify = p);
+export const { before, after, around } = aop(p => instantiate.proxifier = p);
+
 function instantiate<T>(ctor: CONSTRUCTOR<T>) {
-    return proxify(new ctor);
+    return instantiate.proxifier(new ctor);
+}
+namespace instantiate {
+    export let proxifier: any;
 }
 
 class Base {

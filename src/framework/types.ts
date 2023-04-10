@@ -14,6 +14,8 @@ namespace botox_framework_types {
     }
 
     export type API_ARG_OPTIONS = {
+        optional?: true,
+        virtual?: true,
         validatable: VALIDATABLE_OPTIONS & decorator.THIS_TYPE_IS_TARGET,
     }
 

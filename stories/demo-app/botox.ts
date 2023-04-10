@@ -39,10 +39,14 @@ namespace botox {
     ) {
         let instance = container.instantiate(api);
         api_arg.for_each_arg(instance, (p, arg) => {
+            let input = params?.[p];
+            if (input == null && arg.optional) return;
+
             const { parser, validator } = arg.validatable;
-            let value = parser.call(instance, params?.[p]);
+            let value = parser.call(instance, input);
             let error = validator?.call(instance, value);
             if (error) throw error;
+
             instance[p] = value;
         });
         return run(instance)
