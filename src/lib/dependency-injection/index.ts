@@ -21,12 +21,19 @@ export default function dependency_injection() {
     // to handle depencency loop
     let instantiation_loop = new Map<CONSTRUCTOR<any>, any>();
 
-    const inject = (
+    const inject: {
+        (            ): types.INJECTION_DECORATOR
+        (name: string): types.INJECTION_DECORATOR
+
+        <T, P extends keyof T>(token    :       types.Token<T[P]>) : types.INJECTION_DECORATOR<T, P>
+        <T, P extends keyof T>(get_type : () => CONSTRUCTOR<T[P]>) : types.INJECTION_DECORATOR<T, P>
+        <T, P extends keyof T>(service  : types.SERVICE_KEY<T[P]>) : types.INJECTION_DECORATOR<T, P>
+     } = (
         service?: types.INJECT_SERVICE
     ) => (
-        ...args: Parameters<types.INJECTION_DECORATOR>
+        target: Object, property?: PropertyKey, index?: number
     ) => {
-        injectors.route(service, args);
+        injectors.route(service, [ target, property, index ]);
         injectors.drain_injection_events(event_handlers.injection);
     }
 
@@ -44,9 +51,10 @@ export default function dependency_injection() {
         instantiate,
 
         inject,
-        create_inject: (
-            factory: types.SERVICE_FACTORY,
-        ) => inject({ type: 'factory', factory }),
+
+        create_inject: <T, P extends keyof T>(
+            factory: types.SERVICE_FACTORY<T[P]>,
+        ) => (t: T, p?: P, i?: number) => void inject({ type: 'factory', factory })(t, p, i),
 
         on: <E extends types.EVENT>(
             event: E,

@@ -38,9 +38,9 @@ export default function (
                 property != null,
                 index != null,
             );
-            if (!injector) throw new Error(
+            if (!injector) throw new types.InjectionError(
                 'unsupported injection point',
-                { cause: { target, property, index } }
+                { target, property, index }
             );
 
             injector(service)(...args as [ any, any, any]);
@@ -62,7 +62,7 @@ export default function (
     ) {
         let injection: types.INJECTION<P> = {
             point,
-            get_service: () => get_by_service_key(create_service_key()),
+            get_service: types.InjectionError.try(() => get_by_service_key(create_service_key()), point),
         };
         injection_events.push(injection);
 
@@ -70,7 +70,6 @@ export default function (
 
         function create_service_key(): types.SERVICE_KEY {
             if (!service) {
-                assert_not_built_in(point.design_type);
                 return { type: 'class', class: point.design_type };
             } else if (typeof service == 'function') {
                 return { type: 'class', class: service() };
@@ -143,8 +142,4 @@ export default function (
             static_property,
         }
     }
-}
-
-function assert_not_built_in(type: any) {
-    // @TODO:
 }

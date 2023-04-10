@@ -23,10 +23,11 @@ function test(c: CONSTRUCTOR<HasName>) {
 container.set('name', 'string');
 test(injectBy('name'));
 
-let token = container.token('name');
+let token = container.create_token('name');
 container.set(token, 'token');
 test(injectBy(token));
 
+@container.service()
 class Factory {
     toString() { return 'factory' }
 }
@@ -35,6 +36,7 @@ test(injectBy(() => Factory));
 
 function injectByType() {
 
+    @container.service()
     class Type {
         toString() { return 'type' }
     }
@@ -42,7 +44,7 @@ function injectByType() {
     class A implements HasName {
 
         @container.inject()
-        name!: Type;
+        name: Type;
     }
     return A;
 }

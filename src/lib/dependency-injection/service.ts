@@ -14,7 +14,7 @@ export default function (
 
     const by_name = create_get_by((name: string) => {
         let constructor = names.get(name);
-        return constructor && by_class(constructor)
+        return constructor && by_class(constructor) || not_found(`"${name}"`);
     });
     const by_token = create_get_by((token: types.Token) => {
         if (!token.services.length) not_found(token.toString());
@@ -24,10 +24,12 @@ export default function (
             : by_class(token.services[0]!);
     });
     const by_class = create_get_by((type: CONSTRUCTOR) => {
-        let instance
-            =  service_decorator[mr.get_registry](type).get_own()?.factory?.(get_service)
-            || instantiate(type);
+        let options = service_decorator.get_options(type);
+        if (!options) not_found(`[class: ${type.name}]`);
+
+        let instance = options.factory?.(get_service) || instantiate(type);
         instances.set(type, instance);
+
         return instance;
     });
 
@@ -55,8 +57,8 @@ export default function (
     };
 
     const get_service: types.GET_SERVICE = (service_key: INSTANCE_KEY | types.SERVICE_KEY) => {
-        if      ( typeof service_key == 'string'   ) return getters.by_name (service_key)
-        else if ( typeof service_key == 'function' ) return getters.by_class(service_key)
+        if      ( typeof service_key == 'string'      ) return getters.by_name (service_key)
+        else if ( typeof service_key == 'function'    ) return getters.by_class(service_key)
         else if ( service_key instanceof types.Token  ) return getters.by_token(service_key)
 
         return getters.by_service_key(service_key);
@@ -98,7 +100,7 @@ export default function (
     const service_decorator = decorator.create_class_decorator({
         init_by: (
             ctx,
-            value: string | types.Token | types.SERVICE_FACTORY,
+            value?: string | types.Token | types.SERVICE_FACTORY,
         ) => {
             let options = new ServiceDecoratorOption(ctx.args[0]);
 
@@ -109,6 +111,8 @@ export default function (
             return options;
         },
         target: decorator.target<TARGET>(),
+    })[expandify.expand]({
+        get_options(t: CONSTRUCTOR) { return this[mr.get_registry](t).get_own() },
     });
 
     return service_decorator[expandify.expand]({

@@ -17,6 +17,11 @@ namespace dependency_injection_types {
         }
     }
 
+    export type INJECTION_DECORATOR<
+        T = any,
+        P extends keyof T = any,
+    > = (target: T, property?: P, index?: number) => void
+
     export type SERVICE_FACTORY<T = any> = (get: GET_SERVICE) => T
 
     export type SERVICE_KEY<T = any> = {
@@ -42,11 +47,6 @@ namespace dependency_injection_types {
         <T>(constructor : CONSTRUCTOR<T> ): T
         <T>(servic_key  : SERVICE_KEY<T> ): T
     }
-
-    export type INJECTION_DECORATOR
-        = ParameterDecorator
-        | PropertyDecorator
-    ;
 
     export type POINT = ({
         type     : "constructor_parameter"
@@ -76,6 +76,20 @@ namespace dependency_injection_types {
 
     export type EVENT = keyof EVENT_HANDLERS
 
+    export class InjectionError extends Error {
+        constructor(message: string, point: { target: any, property?: any, index?: any }) {
+            super(message, { cause: point });
+        }
+
+        static try(cb: () => any, point: { target: any, property?: any, index?: any }) {
+            try {
+                return cb();
+            } catch (e) {
+                let message = (e as any)?.message;
+                throw new this(typeof message == 'string' ? message : `${e}`, point);
+            }
+        }
+    }
 }
 
 export default dependency_injection_types;

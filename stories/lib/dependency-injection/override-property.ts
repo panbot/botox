@@ -3,7 +3,7 @@ import { CONSTRUCTOR } from '@/lib/types';
 
 const container = di();
 
-const inject_sound = (sound: string) => container.create_inject(() => sound);
+const inject_sound = (sound: string) => container.create_inject<any, any>(() => sound);
 
 interface CanMakeSound {
     make_sound(): void;
@@ -56,7 +56,7 @@ function with_protected_member_properties() {
 
     class Dog extends Animal {
         @inject_sound('woof')
-        protected sound!: string;
+        protected sound: string;
     }
 
     class SmallDog extends Dog {

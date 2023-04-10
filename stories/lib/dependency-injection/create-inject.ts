@@ -13,18 +13,18 @@ container.set(
     }
 )
 
-const InjectParam = (
-    retrieve: (p: AppParameters) => any,
-) => container.create_inject(
-    get => retrieve(get(token))
-);
-
-const t = InjectParam(p => p.env);
+const inject_param = <T, P extends keyof T>(
+    retrieve: (p: AppParameters) => T[P],
+) => container.create_inject<T, P>(get => retrieve(get(token)))
 
 class Service {
 
-    @InjectParam(p => p.env)
-    env!: string;
+    @inject_param(p => p.env)
+    env: string;
+
+    //@ts-expect-error
+    @inject_param(p => p.env)
+    num: number;
 
     doSth(t: string) {
         console.log(this.env, 'service doing something', t);

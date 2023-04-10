@@ -2,11 +2,13 @@ import di from '@/lib/dependency-injection';
 
 const container = di();
 
+@container.service()
 class A {
     @container.inject(() => B)
     b: TYPEOF_B;
 }
 
+@container.service()
 class B {
     @container.inject()
     a: A;
