@@ -5,12 +5,23 @@ import { CONSTRUCTOR } from "@/lib/types";
 
 class CallApi {
 
+    @botox.inject_token('enabled_modules')
+    modules: CONSTRUCTOR<botox.Module>[];
+
     @botox.api_arg().virtual(true).validatable({
-        parser: () => {
+        parser() {
             const module = botox.container.get(ApiLookup).get_module(
                 process.argv[2] || '',
             );
-            if (!module) throw new Error('module not found');
+            if (!module) {
+                console.log(`module "${process.argv[2]}" not found`);
+
+                console.log('available modules:');
+                for (let m of this.modules) {
+                    console.log('\t' + m.name)
+                }
+                process.exit(1);
+            }
 
             return module;
         }
@@ -23,7 +34,14 @@ class CallApi {
                 this.module,
                 process.argv[3] || ''
             );
-            if (!api) throw new Error('api not found');
+            if (!api) {
+                console.log(`api "${process.argv[3]}" not found`);
+                console.log('available apis:');
+                for (let a of botox.module.get_options(this.module)?.apis || []) {
+                    console.log('\t' + a.name);
+                }
+                process.exit(2);
+            }
 
             return api;
         }
