@@ -37,15 +37,18 @@ function aop_factory(
 
 namespace aop_factory {
 
+    export type        ARGS<D> = D extends (...arg: infer U) => any ? U : never
+    export type RETURN_TYPE<D> = D extends (...arg: any) => infer R ? R : never
+
     export type POINTCUT<T, M, D> = {
 
         target     : T,
         method     : M,
         descriptor : TPD<D>,
 
-        args:         D extends (...arg: infer U) => any ? U : never,
-        result:       D extends (...arg: any) => infer R ? R : never,
-        invoke: () => D extends (...arg: any) => infer R ? R : never,
+        args:                ARGS<D>,
+        result:       RETURN_TYPE<D>,
+        invoke: () => RETURN_TYPE<D>,
 
         error: boolean,
     }

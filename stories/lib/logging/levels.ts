@@ -5,23 +5,27 @@ import { assert_true } from 'stories/asserts';
 import { IS } from '@/lib/types';
 
 const levels = {
-    debug: 0,
-    info: 1,
-    warn: 2,
-    crit: 3,
-    log: 4,
+    debug : 0,
+    info  : 1,
+    warn  : 2,
+    crit  : 3,
+    log   : 4,
 };
 
-const level = 2;
+const base_loggers = {
+    debug : (...args: any) => console.log  ('debug' , ...args),
+    info  : (...args: any) => console.log  ('info'  , ...args),
+    warn  : (...args: any) => console.error('warn'  , ...args),
+    crit  : (...args: any) => console.error('crit'  , ...args),
+    log   : (...args: any) => console.log  ('log'   , ...args),
+};
 
 {
-    const log = (...args: any) => {};
-
-    const loggers = logging.create_loggers(log, levels, level);
-
-    type LOGGERS = typeof loggers;
-
-    assert_true<IS< LOGGERS, { [ P in keyof typeof levels]: typeof log } >>();
+    const loggers = logging.create_loggers(
+        levels,
+        base_loggers,
+        2
+    );
 }
 
 {
@@ -31,33 +35,57 @@ const level = 2;
     const decorators = logging.create_decorators(
         aop.after,
         levels,
-        level,
+        base_loggers,
+        0,
     );
-    assert_true<IS<
-        typeof decorators,
-        {
-            [ P in keyof typeof levels]: (callback: (error: any, result: any) => void) => MethodDecorator
-        }
-    >>();
-
 
     class MyService {
 
-        @decorators.debug((e, r) => {
-
-        })
+        @decorators.info(
+            (log, result, p) => {
+                assert_true<IS<typeof result, number>>();
+                log(p.args, result);
+            },
+            (log, error, p) => {
+                log(p.args, error);
+            }
+        )
         async someAsyncMethod(...args: number[]) {
-            if (args.length > 5) throw new Error(`too many args`);
+            if (args.length > 3) throw new Error(`too many args`);
             return args.reduce((pv, cv) => pv + cv);
         }
 
-        @decorators.debug((e, r) => {
-
-        })
+        @decorators.debug(
+            (log, result, p) => {
+                assert_true<IS<typeof result, number>>();
+                log(p.args, result);
+            },
+            (log, error, p) => {
+                log(p.args, error);
+            }
+        )
         someMethod(...args: number[]) {
-            if (args.length > 5) throw new Error(`too many args`);
+            if (args.length > 3) throw new Error(`too many args`);
             return args.reduce((pv, cv) => pv + cv);
         }
     }
+
+    void async function () {
+        let instance = container.instantiate(MyService);
+
+        await try_call(() => instance.someAsyncMethod(1, 2, 3));
+        await try_call(() => instance.someMethod(1, 2, 3));
+
+        await try_call(() => instance.someAsyncMethod(4, 5, 6, 7));
+        await try_call(() => instance.someMethod(4, 5, 6, 7));
+
+        async function try_call(cb: () => any) {
+            try {
+                console.log(await cb())
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    }()
 
 }

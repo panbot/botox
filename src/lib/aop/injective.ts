@@ -8,8 +8,8 @@ function injective_aop_factory() {
     return <
         T extends Object,
         M extends botox_framework_types.METHODS<T>,
-        ARGS extends any[] = T[M] extends (...args: infer U) => any ? U : never,
-        RESULT = T[M] extends (...args: any) => infer U ? U : never,
+        ARGS extends any[] = aop_factory.ARGS<T[M]>,
+        RESULT = aop_factory.RETURN_TYPE<T[M]>,
         D = (...args: ARGS) => RESULT,
     >(
         target: T,

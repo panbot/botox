@@ -1,59 +1,85 @@
 import { isPromise } from 'node:util/types';
-import aop from './aop'
+import aop_factory from './aop/factory';
 
 namespace logging {
     export type LEVEL = number;
 
     export const create_loggers = <
-        LOG extends (args: any) => void,
         LEVELS extends Record<PropertyKey, logging.LEVEL>,
+        LOGGERS extends Record<keyof LEVELS, (args: any) => void>,
     >(
-        logger: LOG,
         levels: LEVELS,
+        loggers: LOGGERS,
         level: logging.LEVEL,
-    ) => record_map(
-        levels,
-        (_k, v) => v < level
-            ? (() => {}) as unknown as LOG
-            : logger
-    );
+    ): LOGGERS => {
+        return Object.fromEntries(Object.entries(levels).map(
+            ([ k, v ]) => [
+                k,
+                v < level
+                    ? () => {}
+                    : loggers[k]
+            ]
+        )) as any
+    }
 
     export const create_decorators = <
         LEVELS extends Record<PropertyKey, logging.LEVEL>,
+        LOGGERS extends Record<keyof LEVELS, (args: any) => void>,
     >(
-        after: aop.AOP["after"],
+        after: aop_factory.AOP["after"],
         levels: LEVELS,
+        loggers: LOGGERS,
         level: logging.LEVEL,
-    ) => record_map(
-        levels,
-        (_k, v) => v < level
-            ?   () => () => {}
-            :   (
-                    callback: (error: any, result: any) => void,
-                ) => after(p => {
+    ): {
+        [ P in keyof LOGGERS ]: <T, M, D>(
+            on_success: (
+                log: LOGGERS[P],
+                result: aop_factory.RETURN_TYPE<D> extends Promise<infer U> ? U : aop_factory.RETURN_TYPE<D>,
+                pointcut: aop_factory.AFTER_POINTCUT<T, M, D>,
+            ) => void,
+            on_failure: (
+                log: LOGGERS[P],
+                error: any,
+                pointcut: aop_factory.AFTER_POINTCUT<T, M, D>,
+            ) => void,
+        ) => ( aop_factory.DECORATOR<T, M, D> )
+    } => Object.fromEntries(Object.entries(levels).map(
+        ([ k, v ]) => [
+            k,
+            v < level
+                ? () => () => {}
+                : <T, M, D>(
+                    on_success: (
+                        log: any,
+                        result: any,
+                        pointcut : aop_factory.AFTER_POINTCUT<T, M, D>,
+                    ) => void,
+                    on_failure: (
+                        log: any,
+                        error: any,
+                        pointcut : aop_factory.AFTER_POINTCUT<T, M, D>,
+                    ) => void,
+                ) => after<T, M, D>(p => {
                     if (isPromise(p.result)) {
-                        p.result.then(r => callback(null, r)).catch(e => callback(e, null));
+                        p.result.then(
+                            r => on_success(loggers[k], r, p)
+                        ).catch(
+                            e => on_failure(loggers[k], e, p)
+                        );
+
                         return p.result;
                     } else if (p.error) {
-                        callback(p.result, null);
+                        on_failure(loggers[k], p.result, p);
+
                         throw p.result;
                     } else {
-                        callback(null, p.result);
+                        on_success(loggers[k], p.result, p);
+
                         return p.result;
                     }
                 })
-    )
+        ]
+    )) as any
 }
 
 export default logging;
-
-function record_map<const R extends Record<any, any>, T>(
-    record: R,
-    mapper: <K extends keyof R>(k: K, v: R[K]) => T,
-) {
-    return Object.fromEntries((
-        Object.keys(record) satisfies (keyof R)[]
-    ).map(
-        k => [ k, mapper(k, record[k]) ]
-    )) as { [ K in keyof R ] : T }
-}
