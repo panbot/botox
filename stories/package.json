@@ -1,0 +1,19 @@
+{
+  "name": "stories",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "story": "ts-node -r tsconfig-paths/register -P tsconfig.json",
+    "demo-app-api": "ts-node -r tsconfig-paths/register -P tsconfig.json demo-app/call-api",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "tsconfig-paths": "^4.2.0"
+  }
+}
