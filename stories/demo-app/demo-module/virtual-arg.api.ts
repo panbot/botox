@@ -1,8 +1,7 @@
-import runnable from "@/lib/runnable";
 import botox from "../botox";
 
 @botox.api()
-export class VirtualArgApi implements runnable.Runnable {
+export class VirtualArgApi implements botox.Api {
 
     @botox.api_arg().optional(true)
     arg1?: any;
@@ -16,7 +15,7 @@ export class VirtualArgApi implements runnable.Runnable {
     })
     coarg12: any;
 
-    async [runnable.run]() {
+    async run() {
     }
 
     private validate() {

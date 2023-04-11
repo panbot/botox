@@ -1,10 +1,9 @@
 import { init_modules } from "./bootstrap";
-import runnable from "@/lib/runnable";
 import { ApiLookup } from "./services/api-lookup";
 import botox from "./botox";
 import { CONSTRUCTOR } from "@/lib/types";
 
-class CallApi implements runnable.Runnable {
+class CallApi {
 
     @botox.api_arg().virtual(true).validatable({
         parser: () => {
@@ -29,14 +28,14 @@ class CallApi implements runnable.Runnable {
             return api;
         }
     })
-    api: CONSTRUCTOR<runnable.Runnable>;
+    api: CONSTRUCTOR<botox.Api>;
 
     @botox.api_arg().virtual(true).validatable({
         parser: () => JSON.parse(process.argv[4] || '{}')
     })
     params: any;
 
-    async [runnable.run]() {
+    async run() {
         await init_modules([ this.module ]);
         return botox.invoke_api(this.api, this.params);
     }

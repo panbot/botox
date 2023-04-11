@@ -7,17 +7,20 @@ async function testRun() {
     const {
         run,
         run_arg,
-    } = runnable(c => new c);
+    } = runnable(c => new c, 'run');
+
+    class RunArg1 {
+        constructor(
+            public arg1: string
+        ) { }
+    }
 
     class RunArgFactory1 implements runnable.RunArgFactory {
-        async produce_run_arg(r: runnable.Runnable, arg1: string, arg2: number) {
-            return {
-                arg1,
-                arg2,
-            }
+        produce_run_arg(r: any, arg1: string) {
+            return new RunArg1(arg1)
         }
 
-        async around_run<T>(r: runnable.Runnable<T>, run: () => Promise<T>): Promise<T> {
+        async around_run(r: any, run: () => any) {
             console.log('RunArgFactory1 before run');
             let result = await run();
             console.log('RunArgFactory1 after run');
@@ -25,15 +28,18 @@ async function testRun() {
         }
     }
 
+    class RunArg2 {
+        constructor(
+            public arg2: number
+        ) { }
+    }
+
     class RunArgFactory2 implements runnable.RunArgFactory {
-        async produce_run_arg(r: runnable.Runnable, arg1: string, arg2: number) {
-            return {
-                arg1,
-                arg2,
-            }
+        async produce_run_arg(r: any, arg2: number) {
+            return new RunArg2(arg2)
         }
 
-        async around_run<T>(r: runnable.Runnable<T>, run: () => Promise<T>): Promise<T> {
+        async around_run(r: any, run: () => any) {
             console.log('RunArgFactory2 before run');
             let result = await run();
             console.log('RunArgFactory2 after run');
@@ -41,17 +47,17 @@ async function testRun() {
         }
     }
 
-    class A implements runnable.Runnable {
+    class A {
 
-        async run(
-            @run_arg(RunArgFactory1, 'hello', 1) runArg1: Awaited<ReturnType<RunArgFactory1["produce_run_arg"]>>,
-            @run_arg(RunArgFactory2, 'world', 2) runArg2: Awaited<ReturnType<RunArgFactory2["produce_run_arg"]>>,
+        run(
+            @run_arg(RunArgFactory1, 'hello world') runArg1: RunArg1,
+            @run_arg(RunArgFactory2, 1) runArg2: RunArg2,
         ) {
             console.log('inside A::run()');
             console.log('runArg1', runArg1);
             console.log('runArg2', runArg2);
 
-            return runArg1.arg1 + ' ' + runArg2.arg1;
+            return runArg1.arg1 + ' ' + runArg2.arg2;
         }
     }
 

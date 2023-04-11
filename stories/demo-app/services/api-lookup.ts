@@ -9,7 +9,7 @@ export class ApiLookup {
     private apis = new MapMap<[
         module: string | CONSTRUCTOR<botox.Module>,
         api: string
-    ], CONSTRUCTOR>();
+    ], CONSTRUCTOR<botox.Api>>();
 
     constructor(
         @botox.inject_token('enabled_modules')

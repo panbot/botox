@@ -16,7 +16,7 @@ namespace botox {
 
     export const aop = proxitive_aop_factory(p => container.on('instantiated', o => p(o)));
 
-    export const { run, run_arg } = runnable(container.get);
+    export const { run, run_arg } = runnable(container.get, 'run');
 
     export const validatable = botox_validatable_factory();
     export const api_arg = botox_property_as_arg(validatable);
@@ -53,13 +53,11 @@ namespace botox {
     )
 
     export function invoke_api(
-        api: CONSTRUCTOR<runnable.Runnable>,
+        api: CONSTRUCTOR<Api>,
         params?: any,
     ) {
         let instance = container.instantiate(api);
         api_arg.for_each_arg(instance, (p, arg) => {
-            console.log(instance, p);
-
             let input = params?.[p];
             if (input == null) {
                 if (arg.optional) return;
@@ -78,6 +76,10 @@ namespace botox {
 
     export interface Module {
         init?(): Promise<void>
+    }
+
+    export interface Api {
+        run(...args: any): Promise<any>
     }
 
     export type MODULE_OPTIONS = botox_framework_types.MODULE_OPTIONS & {

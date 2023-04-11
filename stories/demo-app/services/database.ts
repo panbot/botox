@@ -20,7 +20,7 @@ export namespace DatabaseService {
             (log, r, p, loggers) => log('database connection produced for', p.args[0]),
             (log, e, p, loggers) => loggers.warn('failed to produce database connection for', p.args[0], e),
         )
-        async produce_run_arg(r: runnable.Runnable, connection: string){
+        async produce_run_arg(r: botox.Api, connection: string){
             return new DatabaseService(connection);
         }
 
@@ -28,7 +28,7 @@ export namespace DatabaseService {
             (log, r, p, loggers) => log('database connection released for', p.args[0]),
             (log, e, p, loggers) => loggers.warn('failed to release database connection for', p.args[0], e),
         )
-        async release_run_arg?(r: runnable.Runnable) {
+        async release_run_arg?(r: botox.Api) {
         }
     }
 }

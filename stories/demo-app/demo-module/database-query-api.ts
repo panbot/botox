@@ -1,9 +1,8 @@
-import runnable from "@/lib/runnable";
 import botox from "../botox";
 import { DatabaseService } from "../services/database";
 
 @botox.api()
-export class DatabaseQueryApi implements runnable.Runnable {
+export class DatabaseQueryApi implements botox.Api {
 
 
     @botox.api_arg().validatable({

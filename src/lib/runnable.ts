@@ -1,22 +1,30 @@
 import { CONSTRUCTOR, INSTANTIATOR, REMOVE_HEAD, REQUIRED_KEY } from "./types";
 import mr from './metadata-registry';
 
-function runnable(
+function runnable<M extends PropertyKey>(
     instantiate: INSTANTIATOR,
+    method: M,
 ) {
+    if (typeof method == 'symbol') {
+        console.warn(
+            `Parameter decorator doesn't work with symbol method at the moment.`,
+            `(https://github.com/microsoft/TypeScript/issues/50305)`
+        );
+    }
+
     const get_registry = mr.property_factory(false)(mr.create_key<RUN_ARG[]>());
 
     return {
         run,
 
         run_arg: <
-            O extends runnable.Runnable,
+            O extends Object,
             P extends PropertyKey,
             I extends number,
-            F extends runnable.RunArgFactory<ARG_TYPE<O, P, I>>
+            F extends runnable.RunArgFactory<RUN_ARG_TYPE<ARG_TYPE<O, P, I>>>
         >(
             Factory: CONSTRUCTOR<F>,
-            ...args: GET_PRODUCER_ARGS<F>
+            ...args: PRODUCER_ARGS<F>
         ) => (
             proto: O,
             method: P,
@@ -24,14 +32,17 @@ function runnable(
         ) => void get_registry(proto, method).get_or_set([]).push({ index, Factory, args }),
     }
 
-    async function run<T>(
-        instance: runnable.Runnable<T>,
+    async function run<
+        T extends { [ P in M ]: (...args: any) => R },
+        R extends T[M] extends (...args: any) => infer U ? U : never,
+    >(
+        instance: T,
     ) {
-        let producers = get_registry(instance, runnable.run).get();
-        if (!producers?.length) return await instance[runnable.run]();
+        let producers = get_registry(instance, method).get();
+        if (!producers?.length) return await instance[method]();
 
         let args: any[] = [];
-        let produce = async <U, T extends runnable.RunArgFactory<U>>(
+        let produce = async <T extends runnable.RunArgFactory>(
             producer: RUN_ARG<T>,
             factory: T
         ) => args[producer.index] = await factory.produce_run_arg(
@@ -43,7 +54,7 @@ function runnable(
         let releasing: (() => Promise<void> | void)[] = [];
 
         let arounders: Arounder[] = [];
-        let around = (f: () => Promise<T>) => arounders.reduce(
+        let around = (f: () => R) => arounders.reduce(
             (pv, cv) => () => cv.around_run(instance, pv),
             f,
         )
@@ -59,7 +70,7 @@ function runnable(
 
         try {
             await Promise.all(producing);
-            let invoke = () => instance[runnable.run](...args);
+            let invoke = () => instance[method](...args);
 
             if (!arounders.length) return await invoke();
 
@@ -74,22 +85,10 @@ function runnable(
 
 namespace runnable {
 
-    // https://github.com/microsoft/TypeScript/issues/50305
-    // parameter decorator doesn't work with symbol method at the moment
-    // export const run = Symbol();
-    export const run = 'run';
-
-    export interface Runnable<T = unknown> {
-        [run](...args: any[]): Promise<T>;
-    }
-
-    export interface RunArgFactory<RunArg = unknown> {
-
-        produce_run_arg(for_runnable: Runnable, ...args: any): Promise<RunArg>;
-
-        release_run_arg?(for_runnable: Runnable): Promise<void>;
-
-        around_run?<T>(for_runnable: Runnable<T>, invoke: () => Promise<T>): Promise<T>;
+    export interface RunArgFactory<T = unknown> {
+        produce_run_arg (for_runnable: any, ...args: any     ): T;
+        release_run_arg?(for_runnable: any                   ): Promise<void> | void;
+             around_run?(for_runnable: any, invoke: () => any): any;
     }
 
 }
@@ -102,9 +101,10 @@ type ARGS_OF_T<T>
     ? U
     : never
 ;
-export type ARG_TYPE<T, P, I> = P_OF_T<I, ARGS_OF_T<P_OF_T<P, T>>, P_OF_T<P, T>>
+type ARG_TYPE<T, P, I> = P_OF_T<I, ARGS_OF_T<P_OF_T<P, T>>, P_OF_T<P, T>>
+type RUN_ARG_TYPE<T> = T | Promise<T>
 
-type GET_PRODUCER_ARGS<
+type PRODUCER_ARGS<
     T extends runnable.RunArgFactory
 > = REMOVE_HEAD<Parameters<T['produce_run_arg']>>;
 
@@ -113,7 +113,7 @@ type RUN_ARG<
 > = {
     index: number,
     Factory: CONSTRUCTOR<T>,
-    args: GET_PRODUCER_ARGS<T>,
+    args: PRODUCER_ARGS<T>,
 };
 
 type Arounder = REQUIRED_KEY<runnable.RunArgFactory, "around_run">;
