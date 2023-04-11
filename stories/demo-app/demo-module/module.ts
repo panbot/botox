@@ -1,4 +1,5 @@
 import botox from "../botox";
+import { DatabaseQueryApi } from "./database-query-api";
 import { DemoApi } from "./demo-api";
 import { VirtualArgApi } from "./virtual-arg.api";
 
@@ -6,6 +7,7 @@ import { VirtualArgApi } from "./virtual-arg.api";
 ).apis([
     DemoApi,
     VirtualArgApi,
+    DatabaseQueryApi,
 ])
 export class DemoModule {
     async init() {

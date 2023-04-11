@@ -4,7 +4,7 @@ const container = di();
 class Service {}
 
 class MyClass {
-    @container.inject()
+    // @container.inject()
     static service: Service;
 }
 

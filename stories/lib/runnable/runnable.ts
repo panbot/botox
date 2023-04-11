@@ -4,8 +4,6 @@ import { assert_true } from "stories/asserts";
 
 async function testRun() {
 
-    type Runnable<T> = runnable.Runnable<T>
-
     const {
         run,
         run_arg,
@@ -45,7 +43,7 @@ async function testRun() {
 
     class A implements runnable.Runnable {
 
-        async [runnable.run](
+        async run(
             @run_arg(RunArgFactory1, 'hello', 1) runArg1: Awaited<ReturnType<RunArgFactory1["produce_run_arg"]>>,
             @run_arg(RunArgFactory2, 'world', 2) runArg2: Awaited<ReturnType<RunArgFactory2["produce_run_arg"]>>,
         ) {

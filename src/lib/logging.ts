@@ -32,15 +32,17 @@ namespace logging {
         level: logging.LEVEL,
     ): {
         [ P in keyof LOGGERS ]: <T, M, D>(
-            on_success: (
+            on_success?: (
                 log: LOGGERS[P],
                 result: aop_factory.RETURN_TYPE<D> extends Promise<infer U> ? U : aop_factory.RETURN_TYPE<D>,
                 pointcut: aop_factory.AFTER_POINTCUT<T, M, D>,
+                loggers: LOGGERS,
             ) => void,
-            on_failure: (
+            on_failure?: (
                 log: LOGGERS[P],
                 error: any,
                 pointcut: aop_factory.AFTER_POINTCUT<T, M, D>,
+                loggers: LOGGERS,
             ) => void,
         ) => ( aop_factory.DECORATOR<T, M, D> )
     } => Object.fromEntries(Object.entries(levels).map(
@@ -49,31 +51,33 @@ namespace logging {
             v < level
                 ? () => () => {}
                 : <T, M, D>(
-                    on_success: (
+                    on_success?: (
                         log: any,
                         result: any,
                         pointcut : aop_factory.AFTER_POINTCUT<T, M, D>,
+                        loggers: LOGGERS,
                     ) => void,
-                    on_failure: (
+                    on_failure?: (
                         log: any,
                         error: any,
                         pointcut : aop_factory.AFTER_POINTCUT<T, M, D>,
+                        loggers: LOGGERS,
                     ) => void,
                 ) => after<T, M, D>(p => {
                     if (isPromise(p.result)) {
                         p.result.then(
-                            r => on_success(loggers[k], r, p)
+                            r => on_success?.(loggers[k], r, p, loggers)
                         ).catch(
-                            e => on_failure(loggers[k], e, p)
+                            e => on_failure?.(loggers[k], e, p, loggers)
                         );
 
                         return p.result;
                     } else if (p.error) {
-                        on_failure(loggers[k], p.result, p);
+                        on_failure?.(loggers[k], p.result, p, loggers);
 
                         throw p.result;
                     } else {
-                        on_success(loggers[k], p.result, p);
+                        on_success?.(loggers[k], p.result, p, loggers);
 
                         return p.result;
                     }

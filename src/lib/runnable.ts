@@ -9,13 +9,18 @@ function runnable(
     return {
         run,
 
-        run_arg: <T extends runnable.RunArgFactory>(
-            Factory: CONSTRUCTOR<T>,
-            ...args: GET_PRODUCER_ARGS<T>
-        ) => <U>(
-            proto: runnable.Runnable<U>,
-            method: PropertyKey,
-            index: number,
+        run_arg: <
+            O extends runnable.Runnable,
+            P extends PropertyKey,
+            I extends number,
+            F extends runnable.RunArgFactory<ARG_TYPE<O, P, I>>
+        >(
+            Factory: CONSTRUCTOR<F>,
+            ...args: GET_PRODUCER_ARGS<F>
+        ) => (
+            proto: O,
+            method: P,
+            index: I,
         ) => void get_registry(proto, method).get_or_set([]).push({ index, Factory, args }),
     }
 
@@ -69,7 +74,10 @@ function runnable(
 
 namespace runnable {
 
-    export const run = Symbol();
+    // https://github.com/microsoft/TypeScript/issues/50305
+    // parameter decorator doesn't work with symbol method at the moment
+    // export const run = Symbol();
+    export const run = 'run';
 
     export interface Runnable<T = unknown> {
         [run](...args: any[]): Promise<T>;
@@ -87,6 +95,14 @@ namespace runnable {
 }
 
 export default runnable;
+
+type P_OF_T<P, T, O = never> = P extends keyof T ? T[P] : O
+type ARGS_OF_T<T>
+    = T extends (...args: infer U) => any
+    ? U
+    : never
+;
+export type ARG_TYPE<T, P, I> = P_OF_T<I, ARGS_OF_T<P_OF_T<P, T>>, P_OF_T<P, T>>
 
 type GET_PRODUCER_ARGS<
     T extends runnable.RunArgFactory

@@ -6,7 +6,7 @@ import { CONSTRUCTOR } from "@/lib/types";
 
 class CallApi implements runnable.Runnable {
 
-    @botox.api_arg().validatable({
+    @botox.api_arg().virtual(true).validatable({
         parser: () => {
             const module = botox.container.get(ApiLookup).get_module(
                 process.argv[2] || '',
@@ -18,7 +18,7 @@ class CallApi implements runnable.Runnable {
     })
     module: CONSTRUCTOR<botox.Module>;
 
-    @botox.api_arg().validatable({
+    @botox.api_arg().virtual(true).validatable({
         parser() {
             const api = botox.container.get(ApiLookup).get_api(
                 this.module,
@@ -31,7 +31,7 @@ class CallApi implements runnable.Runnable {
     })
     api: CONSTRUCTOR<runnable.Runnable>;
 
-    @botox.api_arg().validatable({
+    @botox.api_arg().virtual(true).validatable({
         parser: () => JSON.parse(process.argv[4] || '{}')
     })
     params: any;

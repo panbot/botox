@@ -3,13 +3,18 @@ import botox_class_as_api from "@/framework/api/class-as-api";
 import botox_module_factory from "@/framework/module";
 import botox_framework_types from "@/framework/types";
 import botox_validatable_factory from "@/framework/validatable";
-import dependency_injection from "@/lib/dependency-injection";
+import di from "@/lib/dependency-injection";
 import runnable from "@/lib/runnable";
 import { CONSTRUCTOR } from "@/lib/types";
+import logging from '@/lib/logging';
+import aop_factory from "@/lib/aop/factory";
+import proxitive_aop_factory from "@/lib/aop/proxitive";
 
 namespace botox {
 
-    export const container = dependency_injection();
+    export const container = di();
+
+    export const aop = proxitive_aop_factory(p => container.on('instantiated', o => p(o)));
 
     export const { run, run_arg } = runnable(container.get);
 
@@ -30,12 +35,12 @@ namespace botox {
     export const { inject } = container
     export const inject_token = <
         T,
-        P extends dependency_injection.P_EXTENDS<T>,
-        I extends dependency_injection.I_EXTENDS<P>,
+        P extends di.P_EXTENDS<T>,
+        I extends di.I_EXTENDS<P>,
         N extends keyof {
             [ K in keyof TOKENS as
-                TOKENS[K] extends dependency_injection.Token<infer U>
-                    ? U extends dependency_injection.TYPE<T, P, I>
+                TOKENS[K] extends di.Token<infer U>
+                    ? U extends di.TYPE<T, P, I>
                     ? K
                     : never
                     : never
@@ -53,8 +58,13 @@ namespace botox {
     ) {
         let instance = container.instantiate(api);
         api_arg.for_each_arg(instance, (p, arg) => {
+            console.log(instance, p);
+
             let input = params?.[p];
-            if (input == null && arg.optional) return;
+            if (input == null) {
+                if (arg.optional) return;
+                if (!arg.virtual) throw new Error(`${p} is required`);
+            }
 
             const { parser, validator } = arg.validatable;
             let value = parser.call(instance, input);
@@ -81,6 +91,41 @@ namespace botox {
     export type API_ARG_OPTIONS = botox_framework_types.API_ARG_OPTIONS & {
 
     }
+
+    export namespace logging {
+        const logging = logging_factory(0, aop.after);
+
+        export const loggers = logging.loggers;
+        export const decorators = logging.decorators;
+    }
 }
 
 export default botox;
+
+function logging_factory(
+    level: logging.LEVEL,
+    after: aop_factory.AOP["after"],
+) {
+
+    const levels = {
+        debug : 0,
+        info  : 1,
+        warn  : 2,
+        crit  : 3,
+        log   : 4,
+    };
+
+    const base_loggers = {
+        debug : (...args: any) => console.log  ('debug' , ...args),
+        info  : (...args: any) => console.log  ('info'  , ...args),
+        warn  : (...args: any) => console.error('warn'  , ...args),
+        crit  : (...args: any) => console.error('crit'  , ...args),
+        log   : (...args: any) => console.log  ('log'   , ...args),
+    };
+
+    const loggers = logging.create_loggers(levels, base_loggers, level);
+
+    const decorators = logging.create_decorators(after, levels, base_loggers, level);
+
+    return { loggers, decorators }
+}
