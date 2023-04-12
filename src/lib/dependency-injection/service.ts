@@ -13,8 +13,8 @@ export default function (
     let instances = new Map<INSTANCE_KEY, any>();
 
     const by_name = create_get_by((name: string) => {
-        let constructor = names.get(name);
-        return constructor && by_class(constructor) || not_found(`"${name}"`);
+        let constructor = names.get(name) ?? not_found(`"${name}"`);
+        return by_class(constructor);
     });
     const by_token = create_get_by((token: types.Token) => {
         if (!token.services.length) not_found(token.toString());
@@ -27,7 +27,7 @@ export default function (
         let options = service_decorator.get_options(type);
         if (!options) not_found(`[class: ${type.name}]`);
 
-        let instance = options.factory?.(get_service) || instantiate(type);
+        let instance = options.factory?.(get_service) ?? instantiate(type);
         instances.set(type, instance);
 
         return instance;

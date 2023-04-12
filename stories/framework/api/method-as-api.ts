@@ -13,7 +13,7 @@ type OPTIONS = botox_framework_types.API_OPTIONS & {
 }
 
 const btx_api = botox_method_as_api(
-    (api, property, options?: OPTIONS) => options || { doc: '' }
+    (api, property, options?: OPTIONS) => options ?? { doc: '' }
 )
 
 class MyApi {

@@ -9,6 +9,9 @@
   "scripts": {
     "story": "ts-node -r tsconfig-paths/register -P tsconfig.json",
     "demo-app-api": "ts-node -r tsconfig-paths/register -P tsconfig.json demo-app/call-api",
+    "clean": "rimraf dist",
+    "build": "npm run clean && tsc -p tsconfig.json",
+    "dist": "TS_NODE_BASEURL=./dist node -r tsconfig-paths/register",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",

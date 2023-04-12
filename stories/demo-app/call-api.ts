@@ -11,7 +11,7 @@ class CallApi {
     @botox.api_arg().virtual(true).validatable({
         parser() {
             const module = botox.container.get(ApiLookup).get_module(
-                process.argv[2] || '',
+                process.argv[2] ?? '',
             );
             if (!module) {
                 console.log(`module "${process.argv[2]}" not found`);
@@ -32,12 +32,12 @@ class CallApi {
         parser() {
             const api = botox.container.get(ApiLookup).get_api(
                 this.module,
-                process.argv[3] || ''
+                process.argv[3] ?? ''
             );
             if (!api) {
                 console.log(`api "${process.argv[3]}" not found`);
                 console.log('available apis:');
-                for (let a of botox.module.get_options(this.module)?.apis || []) {
+                for (let a of botox.module.get_options(this.module)?.apis ?? []) {
                     console.log('\t' + a.name);
                 }
                 process.exit(2);
@@ -49,7 +49,7 @@ class CallApi {
     api: CONSTRUCTOR<botox.Api>;
 
     @botox.api_arg().virtual(true).validatable({
-        parser: () => JSON.parse(process.argv[4] || '{}')
+        parser: () => JSON.parse(process.argv[4] ?? '{}')
     })
     params: any;
 

@@ -21,10 +21,10 @@ namespace botox {
     export const validatable = botox_validatable_factory();
     export const api_arg = botox_property_as_arg(validatable);
     export const api = botox_class_as_api(
-        (api, options?: API_OPTIONS) => options || {}
+        (api, options?: API_OPTIONS) => options ?? {}
     );
     export const module = botox_module_factory(
-        (module, options?: MODULE_OPTIONS) => options || {},
+        (module, options?: MODULE_OPTIONS) => options ?? {},
     );
 
     export const tokens = {

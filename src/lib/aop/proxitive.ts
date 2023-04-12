@@ -16,7 +16,7 @@ function proxitive_aop_factory(
             (p, gr) => proxy[p] = gr().get()?.reduce(
                 (pv, cv) => cv(pv),
                 target[p]
-            ) || proxy[p]
+            ) ?? proxy[p]
         )
 
         return proxy

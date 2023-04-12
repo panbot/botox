@@ -11,7 +11,7 @@ type OPTIONS = botox_framework_types.API_OPTIONS & {
 const btx_api_arg = botox_property_as_arg(btx_validatable);
 
 const btx_api = botox_class_as_api(
-    (api, options?: OPTIONS) => options || { doc: '' }
+    (api, options?: OPTIONS) => options ?? { doc: '' }
 );
 
 @btx_api({

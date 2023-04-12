@@ -67,11 +67,11 @@ export default function(algorithm: hashcash.ALGORITHM = 'sha256') {
 
     function get_resource_difficulty(target: Object, property?: PropertyKey) {
         if (!property && typeof target != 'function') target = target.constructor;
-        return installer[mr.get_registry](target, property).get()?.difficulty || 0;
+        return installer[mr.get_registry](target, property).get()?.difficulty ?? 0;
     }
 
     function get_provided_difficulty(request: Object) {
-        return get_request_registry(request).get_own()?.zeros || 0
+        return get_request_registry(request).get_own()?.zeros ?? 0
     }
 
 }

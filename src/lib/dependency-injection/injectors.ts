@@ -98,8 +98,8 @@ export default function (
             instantiate: (ctor: CONSTRUCTOR<any>, args?: any[]) => new ctor(
                 ...d[mr.get_registry](ctor).get()?.reduce(
                     (pv, cv) => ( pv[cv.point.index] = cv.get_service(), pv ),
-                    args || []
-                ) || [],
+                    args ?? []
+                ) ?? [],
             ),
         }));
 

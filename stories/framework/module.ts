@@ -10,7 +10,7 @@ type OPTIONS = botox_framework_types.MODULE_OPTIONS & {
 }
 
 const btx_module = botox_module_factory(
-    (module, options?: OPTIONS) => options || { doc: '' }
+    (module, options?: OPTIONS) => options ?? { doc: '' }
 );
 
 @btx_module({

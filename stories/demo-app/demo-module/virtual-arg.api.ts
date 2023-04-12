@@ -10,15 +10,16 @@ export class VirtualArgApi implements botox.Api {
     arg2?: any;
 
     @botox.api_arg().virtual(true).validatable({
-        parser: v => v,
-        validator() { return this.validate() }
+        parser() {
+            this.arg1 ?? this.arg2 ?? error('either arg1 or arg2 must be provided')
+        }
     })
     coarg12: any;
 
     async run() {
     }
+}
 
-    private validate() {
-        return this.arg1 || this.arg2 ? undefined : 'either arg1 or arg2 must be provided';
-    }
+function error(msg: string): never {
+    throw new TypeError(msg);
 }
