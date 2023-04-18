@@ -19,7 +19,7 @@ namespace botox {
     export const { run, run_arg } = runnable(container.get, 'run');
 
     export const validatable = botox_validatable_factory();
-    export const api_arg = botox_property_as_arg(validatable);
+    export const api_arg = botox_property_as_arg<API_ARG_OPTIONS>(validatable, base => base);
     export const api = botox_class_as_api(
         (api, options?: API_OPTIONS) => options ?? {}
     );
@@ -32,7 +32,7 @@ namespace botox {
     }
     type TOKENS = typeof tokens;
 
-    export const { inject } = container
+    export const { inject } = container;
     export const inject_token = <
         T,
         P extends di.P_EXTENDS<T>,
@@ -50,7 +50,7 @@ namespace botox {
         token: N
     ) => container.create_inject<T, P, I>(
         get => get(tokens[token] as any)
-    )
+    );
 
     export function invoke_api(
         api: CONSTRUCTOR<Api>,
@@ -87,11 +87,12 @@ namespace botox {
     }
 
     export type API_OPTIONS = botox_framework_types.API_OPTIONS & {
-
+        route?: string,
     }
 
     export type API_ARG_OPTIONS = botox_framework_types.API_ARG_OPTIONS & {
-
+        optional?: true,
+        virtual?: true,
     }
 
     export namespace logging {

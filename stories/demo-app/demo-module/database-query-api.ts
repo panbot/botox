@@ -1,7 +1,7 @@
 import botox from "../botox";
 import { DatabaseService } from "../services/database";
 
-@botox.api()
+@botox.api().route('database_query')
 export class DatabaseQueryApi implements botox.Api {
 
 

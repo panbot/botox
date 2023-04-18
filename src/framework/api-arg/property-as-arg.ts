@@ -1,16 +1,16 @@
 import types from "../types";
-import OPTIONS = types.API_ARG_OPTIONS;
 import decorator from "../../lib/decorator";
 import expandify from "../../lib/expandify";
 import botox_validatable_factory from "../validatable";
 import mr from "../../lib/metadata-registry";
 
-function botox_property_as_arg(
+function botox_property_as_arg<OPTIONS extends types.API_ARG_OPTIONS>(
     validatable: botox_validatable_factory.VALIDATABLE,
+    init_by: (base: types.API_ARG_OPTIONS) => OPTIONS,
 ) { return decorator.create_property_decorator.instance({
     init_by: (
         ctx,
-    ): OPTIONS => ({
+    ) => init_by({
         validatable: validatable["get!"](ctx.design_type),
     })
 })[expandify.expand]({
