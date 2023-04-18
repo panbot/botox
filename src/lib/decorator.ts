@@ -57,12 +57,10 @@ const create = <
         registry_factory_type,
     );
 
-    let factory = <TARGET>(...init_args: INIT_PARAMETERS) => {
+    let factory = (...init_args: INIT_PARAMETERS) => {
         let works: ((o: FIELDS) => void)[] = [];
 
-        // let decorator = (...args: ACTUAL_DECORATOR_PARAMS<DT>) => {
-        let decorator = (target: TARGET, ...other_args: REMOVE_HEAD<ACTUAL_DECORATOR_PARAMS<DT>>) => {
-            let args: ACTUAL_DECORATOR_PARAMS<DT> = [ target, ...other_args ] as any;
+        let decorator = (...args: ACTUAL_DECORATOR_PARAMS<DT>) => {
             let fields = options.init_by(
                 { args: args as any, design_type: design_type_getters[decorator_type](...args) },
                 ...init_args
@@ -237,8 +235,8 @@ namespace decorator {
 
     export type DECORATOR<DT extends DECORATOR_TYPE, O> = DECORATORS[DT] & {
         [ P in keyof NON_READONLY<Required<O>> ]: O[P] extends THIS_TYPE_IS_TARGET
-            ? <T>(v: O[P] & ThisType<T>) => GENERIC_TYPE_DECORATORS<T>[DT]
-            : (v: O[P]) => DECORATOR<DT, O>
+            ? <T>(v: NonNullable<O[P]> & ThisType<T>) => GENERIC_TYPE_DECORATORS<T>[DT]
+            :    (v: NonNullable<O[P]>              ) => DECORATOR<DT, O>
     };
 
     type GENERIC_TYPE_DECORATORS<T> = {
@@ -270,12 +268,6 @@ namespace decorator {
         static_method: create('parameter', target_types.constructor, 'method_parameter'     ), } );
 
     export const target = typram.factory();
-
-    export const helpers = {
-        registry_factory,
-        decorator_setters,
-        design_type_getters,
-    }
 }
 
 export default decorator;
