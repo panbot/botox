@@ -70,6 +70,8 @@ type OPTIONS = {
 
         //@ts-expect-error
         @route()
+        //@ts-expect-error
+        @route().content_type('application/json')
         method() {}
 
     }

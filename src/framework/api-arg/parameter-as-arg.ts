@@ -11,7 +11,7 @@ function botox_parameter_as_arg<OPTIONS extends types.API_ARG_OPTIONS>(
     init_by: (
         ctx,
     ): OPTIONS => init_by({
-        validatable: validatable["get!"](ctx.design_type),
+        validatable: validatable["get_options!"](ctx.design_type),
     })
 })[expandify.expand]({
 

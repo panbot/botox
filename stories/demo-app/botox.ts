@@ -111,6 +111,7 @@ namespace botox {
     export type ROUTE_OPTIONS = {
         route: `/${string}`,
         method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'HEAD',
+        content_type?: string,
         req_index?: number;
         res_index?: number;
     }
@@ -186,7 +187,7 @@ function create_route() {
 
                 return options;
             }
-        )
+        ).as_setter<botox.ROUTE_OPTIONS>()
     );
 
     return route[expandify.expand]({

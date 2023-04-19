@@ -3,8 +3,7 @@ const btx_validatable = botox_validatable_factory();
 
 function validate_type(input: any, type: any) {
     try {
-        let options = btx_validatable.get(type);
-        if (!options) throw new Error('not validatable', { cause: type });
+        let options = btx_validatable["get_options!"](type);
 
         let parsed = options.parser(input);
         let error = options.validator?.(parsed);
@@ -15,14 +14,11 @@ function validate_type(input: any, type: any) {
     }
 }
 
-btx_validatable({
-    parser: String,
-})(String);
+btx_validatable(String)(String);
 validate_type('str', String);
 
 btx_validatable(
-    Number
-).validator(
+    Number,
     parsed => isNaN(parsed) ? 'not a number'
                             : undefined,
 )(Number);
@@ -33,9 +29,7 @@ validate_type('5.5.5', Number);
 validate_type('05', Number);
 validate_type('0x5', Number);
 
-btx_validatable({
-    parser: Boolean,
-})(Boolean);
+btx_validatable(Boolean)(Boolean);
 validate_type(1, Boolean);
 validate_type(0, Boolean);
 validate_type('', Boolean);
@@ -49,8 +43,7 @@ btx_validatable(
         switch (typeof input) {
             case 'string': case 'number': return new Date(input);
         }
-    }
-).validator(
+    },
     parsed => {
         let s = parsed?.toString();
         return s == 'Invalid Date' && s

@@ -2,7 +2,7 @@ import botox from "../botox";
 
 export class ApiGateway {
 
-    @botox.route()
+    @botox.route().content_type('application/json')
     'POST /api'(
         req: botox.Req,
         res: botox.Res,

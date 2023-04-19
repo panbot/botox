@@ -34,6 +34,12 @@ export default class {
             if (options.req_index != null) args[options.req_index] = req;
             if (options.res_index != null) args[options.res_index] = res;
 
+            if (options.content_type && options.content_type != req.headers["content-type"]) {
+                res.statusCode = 415;
+                res.end();
+                return;
+            }
+
             instance[property](...args);
         });
     }

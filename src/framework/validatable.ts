@@ -1,48 +1,45 @@
-import decorator from "../lib/decorator";
 import expandify from "../lib/expandify";
-import mr from "../lib/metadata-registry";
-import { CONSTRUCTOR } from "../lib/types";
 import types from "./types";
+import class_decorator_tools from "../lib/decorator-tools/class";
+import assert from 'node:assert';
 
 import OPTIONS = types.VALIDATABLE_OPTIONS;
-
 function botox_validatable_factory() {
 
-    let base = decorator.create_class_decorator({
-        init_by: (
-            ctx,
-            arg : OPTIONS
-                | OPTIONS["parser"]
-        ): OPTIONS => {
-            if (typeof arg == 'function') return { parser: arg }
-            else return arg
-        }
-    });
+    let factory = class_decorator_tools();
 
-    let expanded = base[expandify.expand]({
+    type CONSTRUCTOR<T>
+        = T extends string
+        ? StringConstructor
+        : T extends number
+        ? NumberConstructor
+        : T extends boolean
+        ? BooleanConstructor
+        : abstract new (...args: any) => T
+    ;
 
-        get(type: CONSTRUCTOR) {
-            return this[mr.get_registry](type).get()
-        },
+    let validatable = factory.create(
+        create_decorator => <T>(
+            parser     : OPTIONS<T>["parser"],
+            validator? : OPTIONS<T>["validator"],
+        ) => create_decorator<CONSTRUCTOR<T>>(
+            (ctx): OPTIONS<T> => ({
+                parser,
+                validator,
+            })
+        )
+    );
 
-        "get!"(type: CONSTRUCTOR) {
-            let options = this.get(type);
-            if (!options) options = {
-                parser: () => { throw new TypeError('not validatable') }
-            }
+    return validatable[expandify.expand]({
+
+        get_options: (type: any) => factory.get_registry(type).get(),
+
+        "get_options!": (type: any) => {
+            let options = factory.get_registry(type).get();
+            if (!options) options = { parser: () => assert(false, 'not validatable') }
             return options;
         },
     });
-
-    type EXPANDED = typeof expanded;
-
-    type D<T> = decorator.DECORATOR<'class', OPTIONS<T>>
-    type FACTORY = {
-        <T>(options: OPTIONS<T>          ): D<T>,
-        <T>(parser : OPTIONS<T>["parser"]): D<T>,
-    };
-
-    return expanded as FACTORY & Pick<EXPANDED, typeof mr.get_registry | 'get' | 'get!'>
 }
 
 namespace botox_validatable_factory {
