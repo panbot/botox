@@ -15,7 +15,7 @@ function expandify<O extends {}>(o: O) {
 }
 
 namespace expandify {
-    export const expand = Symbol('expand of expandify');
+    export const expand = Symbol('expandify.expand');
 }
 
 export default expandify;

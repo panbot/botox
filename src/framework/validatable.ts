@@ -38,7 +38,7 @@ function botox_validatable_factory() {
 
     type D<T> = decorator.DECORATOR<'class', OPTIONS<T>>
     type FACTORY = {
-        <T>(options: OPTIONS<T>): D<T>,
+        <T>(options: OPTIONS<T>          ): D<T>,
         <T>(parser : OPTIONS<T>["parser"]): D<T>,
     };
 

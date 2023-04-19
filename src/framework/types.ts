@@ -5,8 +5,6 @@ namespace botox_framework_types {
 
     export type MODULE_OPTIONS = {
         dependencies?: () => CONSTRUCTOR[],
-        controllers?: CONSTRUCTOR[],
-        apis?: CONSTRUCTOR[],
     }
 
     export type API_OPTIONS = {
@@ -14,12 +12,12 @@ namespace botox_framework_types {
     }
 
     export type API_ARG_OPTIONS = {
-        validatable: VALIDATABLE_OPTIONS & decorator.THIS_TYPE_IS_TARGET,
+        validatable: VALIDATABLE_OPTIONS & decorator.THIS_TYPE_IS_TARGET
     }
 
     export type VALIDATABLE_OPTIONS<T = any> = {
-        parser: (input: unknown) => T;
-        validator?: (parsed: T) => string | FALSY;
+        parser: (input: unknown) => T
+        validator?: (parsed: T) => string | FALSY
     }
 
     export type METHODS<T> = keyof {

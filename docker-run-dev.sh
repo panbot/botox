@@ -5,4 +5,5 @@ docker run \
     -ti \
     -v `pwd`:/botox-dev \
     --workdir /botox-dev \
+    -p 9000:80 \
     botox bash

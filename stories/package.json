@@ -8,7 +8,8 @@
   },
   "scripts": {
     "story": "ts-node -r tsconfig-paths/register -P tsconfig.json",
-    "demo-app-api": "ts-node -r tsconfig-paths/register -P tsconfig.json demo-app/call-api",
+    "demo-app-api": "ts-node -r tsconfig-paths/register -P tsconfig.json demo-app/run.ts demo-app/call-api.ts",
+    "demo-app": "ts-node -r tsconfig-paths/register -P tsconfig.json demo-app/run.ts demo-app/start-demo-app.ts",
     "clean": "rimraf dist",
     "build": "npm run clean && tsc -p tsconfig.json",
     "dist": "TS_NODE_BASEURL=./dist node -r tsconfig-paths/register",

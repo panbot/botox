@@ -236,14 +236,14 @@ namespace decorator {
     export type DECORATOR<DT extends DECORATOR_TYPE, O> = DECORATORS[DT] & {
         [ P in keyof NON_READONLY<Required<O>> ]: O[P] extends THIS_TYPE_IS_TARGET
             ? <T>(v: NonNullable<O[P]> & ThisType<T>) => GENERIC_TYPE_DECORATORS<T>[DT]
-            :    (v: NonNullable<O[P]>              ) => DECORATOR<DT, O>
+            : (v: NonNullable<O[P]>) => DECORATOR<DT, O>
     };
 
-    type GENERIC_TYPE_DECORATORS<T> = {
-        class     :     (target: T) => void
-        property  :  (target: T, property: PropertyKey) => void
-        method    :    <D>(target: T, property: string | symbol, descriptor: TypedPropertyDescriptor<D>) => TypedPropertyDescriptor<D> | void
-        parameter : (target: T, property: string | symbol | undefined, index: number) => void;
+    export type GENERIC_TYPE_DECORATORS<T> = {
+        class     :    (target: T) => void
+        property  :    (target: T, property: PropertyKey) => void
+        method    : <D>(target: T, property: PropertyKey, descriptor: TypedPropertyDescriptor<D>) => TypedPropertyDescriptor<D> | void
+        parameter :    (target: T, property: PropertyKey | undefined, index: number) => void;
 
         optional_property: OPTIONAL_PROPERTY_DECORATOR,
     };

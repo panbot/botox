@@ -110,8 +110,8 @@ function metadata_registry<
 }) }
 
 namespace metadata_registry {
-    export const get_registry = Symbol();
-    export const get_properties = Symbol();
+    export const get_registry = Symbol('metadata_registry.get_registry');
+    export const get_properties = Symbol('metadata_registry.get_properties');
 
     export interface Reflection<T> {
         readonly key: KEY<T>

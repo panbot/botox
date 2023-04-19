@@ -44,10 +44,11 @@ validate_type(false, Boolean);
 
 btx_validatable(
     input => {
+        if (input instanceof Date) return input;
+
         switch (typeof input) {
             case 'string': case 'number': return new Date(input);
         }
-        if (input instanceof Date) return input;
     }
 ).validator(
     parsed => {
@@ -58,7 +59,7 @@ btx_validatable(
 validate_type('2023-4-5', Date);
 
 btx_validatable(
-    input => typeof input == 'string' && new URL(input),
+    input => new URL(`${input}`),
 )(URL);
 validate_type('a', URL);
 validate_type('scheme://domain', URL);

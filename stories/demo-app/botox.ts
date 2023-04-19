@@ -9,20 +9,31 @@ import { CONSTRUCTOR } from "@/lib/types";
 import logging from '@/lib/logging';
 import aop_factory from "@/lib/aop/factory";
 import proxitive_aop_factory from "@/lib/aop/proxitive";
+import { IncomingMessage, ServerResponse } from "http";
+import method_decorator_tools from "@/lib/decorator-tools/method";
+import expandify from "@/lib/expandify";
+import metadata_registry from "@/lib/metadata-registry";
 
 namespace botox {
 
     export const container = di();
+    export const { inject } = container;
 
     export const aop = proxitive_aop_factory(p => container.on('instantiated', o => p(o)));
 
     export const { run, run_arg } = runnable(container.get, 'run');
 
     export const validatable = botox_validatable_factory();
-    export const api_arg = botox_property_as_arg<API_ARG_OPTIONS>(validatable, base => base);
+    export const api_arg = botox_property_as_arg<API_ARG_OPTIONS>(validatable, o => o);
     export const api = botox_class_as_api(
         (api, options?: API_OPTIONS) => options ?? {}
     );
+
+    export const route = create_route();
+
+    export class Req extends IncomingMessage {}
+    export class Res extends ServerResponse<IncomingMessage> {}
+
     export const module = botox_module_factory(
         (module, options?: MODULE_OPTIONS) => options ?? {},
     );
@@ -32,7 +43,6 @@ namespace botox {
     }
     type TOKENS = typeof tokens;
 
-    export const { inject } = container;
     export const inject_token = <
         T,
         P extends di.P_EXTENDS<T>,
@@ -53,25 +63,24 @@ namespace botox {
     );
 
     export function invoke_api(
-        api: CONSTRUCTOR<Api>,
+        api: Api,
         params?: any,
     ) {
-        let instance = container.instantiate(api);
-        api_arg.for_each_arg(instance, (p, arg) => {
+        api_arg.for_each_arg(api, (p, arg) => {
             let input = params?.[p];
             if (input == null) {
                 if (arg.optional) return;
-                if (!arg.virtual) throw new Error(`${p} is required`);
+                if (!arg.virtual) throw new Error(`${p.toString()} is required`);
             }
 
             const { parser, validator } = arg.validatable;
-            let value = parser.call(instance, input);
-            let error = validator?.call(instance, value);
+            let value = parser.call(api, input);
+            let error = validator?.call(api, value);
             if (error) throw error;
 
-            instance[p] = value;
+            api[p] = value;
         });
-        return run(instance)
+        return run(api)
     }
 
     export interface Module {
@@ -79,20 +88,31 @@ namespace botox {
     }
 
     export interface Api {
-        run(...args: any): Promise<any>
+        run(...args: any): any
+    }
+
+    export function is_api(o: any): o is Api {
+        return typeof o?.['run'] == 'function';
     }
 
     export type MODULE_OPTIONS = botox_framework_types.MODULE_OPTIONS & {
-
+        apis?: CONSTRUCTOR<Api>[],
+        routes?: CONSTRUCTOR[],
     }
 
     export type API_OPTIONS = botox_framework_types.API_OPTIONS & {
-        route?: string,
     }
 
     export type API_ARG_OPTIONS = botox_framework_types.API_ARG_OPTIONS & {
         optional?: true,
         virtual?: true,
+    }
+
+    export type ROUTE_OPTIONS = {
+        route: `/${string}`,
+        method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'HEAD',
+        req_index?: number;
+        res_index?: number;
     }
 
     export namespace logging {
@@ -131,4 +151,51 @@ function logging_factory(
     const decorators = logging.create_decorators(after, levels, base_loggers, level);
 
     return { loggers, decorators }
+}
+
+function create_route() {
+    const factory = method_decorator_tools();
+
+    const route = factory.create(
+        create_decorator => <
+            T,
+            P extends `${botox.ROUTE_OPTIONS["method"]} ${botox.ROUTE_OPTIONS["route"]}`,
+            D,
+        >(
+
+        ) => create_decorator<T, P, D>(
+            (ctx) => {
+                let method: botox.ROUTE_OPTIONS["method"];
+                let route : botox.ROUTE_OPTIONS["route"];
+
+                [ method, route ] = ctx.property.split(' ', 2) as any;
+
+                let options: botox.ROUTE_OPTIONS = {
+                    method,
+                    route,
+                };
+
+                ctx.design_types.parameters.forEach(
+                    (v, i) => {
+                        switch (v) {
+                            case botox.Req: options.req_index = i; break;
+                            case botox.Res: options.res_index = i; break;
+                        }
+                    }
+                );
+
+                return options;
+            }
+        )
+    );
+
+    return route[expandify.expand]({
+
+        for_each_route: (
+            target: any,
+            cb: (p: PropertyKey, options: botox.ROUTE_OPTIONS) => void,
+        ) => factory.get_registry[metadata_registry.get_properties](target).for_each(
+            (p, gr) => cb(p, gr().get()!)
+        )
+    })
 }
