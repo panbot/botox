@@ -1,20 +1,18 @@
-import expandify from '../expandify';
 import mr from '../metadata-registry';
 import { typram } from '../types';
 import "reflect-metadata";
 
-function method_decorator_tools() {
-    const get_registry = mr(typram<[ any, any ]>())(true)(mr.create_key());
+function method_decorator_tools<OPTIONS extends {}>(
+    key: typram.Typram<OPTIONS>,
+) {
+    const get_registry = mr(typram<[ any, any ]>())(true)(key);
 
     return {
         get_registry,
-
-        create: <T extends Object>(
-            get_factory: (create_decorator: typeof decorator_factory) => T
-        ) => expandify(get_factory(decorator_factory)),
+        create_decorator,
     }
 
-    function decorator_factory<T, P, D>(
+    function create_decorator<T, P, D>(
         init_options: (
             ctx: {
                 target     : T,
@@ -27,7 +25,7 @@ function method_decorator_tools() {
                     type       : any,
                 },
             },
-        ) => any,
+        ) => OPTIONS,
     ) {
         let cache: any = {};
 
@@ -43,26 +41,26 @@ function method_decorator_tools() {
             Object.assign(options, cache);
         }
 
-        return expandify(decorator)[expandify.expand]({
-            as_setter: <OPTIONS>() => new Proxy(decorator, {
+        return Object.assign(decorator, {
+            as_setter: () => new Proxy(decorator, {
                 get: (_t, p, r) => (v: any) => ( cache[p] = v, r )
-            }) as method_decorator_tools.DECORATOR_OPTION_SETTER<T, P, D, OPTIONS>
+            }) as method_decorator_tools.SETTER<T, P, D, OPTIONS>
         })
     }
 }
 
 namespace method_decorator_tools {
 
-    export type METHOD_DECORATOR<T, P, D> = (target: T, property: P, descriptor: TypedPropertyDescriptor<D>) => void
+    export type DECORATOR<T, P, D> = (target: T, property: P, descriptor: TypedPropertyDescriptor<D>) => void
 
-    export type DECORATOR_OPTION_SETTER<T, P, D, OPTIONS> = METHOD_DECORATOR<T, P, D> & {
+    export type SETTER<T, P, D, OPTIONS> = DECORATOR<T, P, D> & {
         [ K in keyof Required<OPTIONS> ] :  <
                                                 T1 extends T,
                                                 P1 extends P,
                                                 D1 extends D,
                                             >(
                                                 value: Required<OPTIONS>[K]
-                                            ) => DECORATOR_OPTION_SETTER<T1, P1, D1, OPTIONS>
+                                            ) => SETTER<T1, P1, D1, OPTIONS>
     }
 }
 

@@ -1,6 +1,3 @@
-import { IS } from "@/lib/types";
-
-
 export default null;
 
 type OPTIONS = {

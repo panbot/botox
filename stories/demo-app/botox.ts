@@ -1,18 +1,16 @@
-import botox_property_as_arg from "@/framework/api-arg/property-as-arg";
-import botox_class_as_api from "@/framework/api/class-as-api";
 import botox_module_factory from "@/framework/module";
 import botox_framework_types from "@/framework/types";
 import botox_validatable_factory from "@/framework/validatable";
 import di from "@/lib/dependency-injection";
 import runnable from "@/lib/runnable";
-import { CONSTRUCTOR } from "@/lib/types";
+import { CONSTRUCTOR, P_OF_T } from "@/lib/types";
 import logging from '@/lib/logging';
 import aop_factory from "@/lib/aop/factory";
 import proxitive_aop_factory from "@/lib/aop/proxitive";
 import { IncomingMessage, ServerResponse } from "http";
-import method_decorator_tools from "@/lib/decorator-tools/method";
-import expandify from "@/lib/expandify";
 import metadata_registry from "@/lib/metadata-registry";
+import decorator_tools from "@/lib/decorator-tools";
+import property_decorator_tools from "@/lib/decorator-tools/property";
 
 namespace botox {
 
@@ -24,19 +22,14 @@ namespace botox {
     export const { run, run_arg } = runnable(container.get, 'run');
 
     export const validatable = botox_validatable_factory();
-    export const api_arg = botox_property_as_arg<API_ARG_OPTIONS>(validatable, o => o);
-    export const api = botox_class_as_api(
-        (api, options?: API_OPTIONS) => options ?? {}
-    );
-
+    export const api_arg = create_api_arg(validatable["get_options!"]);
+    export const api = create_api();
     export const route = create_route();
 
     export class Req extends IncomingMessage {}
     export class Res extends ServerResponse<IncomingMessage> {}
 
-    export const module = botox_module_factory(
-        (module, options?: MODULE_OPTIONS) => options ?? {},
-    );
+    export const module = create_module();
 
     export const tokens = {
         enabled_modules: container.create_token<CONSTRUCTOR<Module>[]>('enabled modules'),
@@ -103,7 +96,8 @@ namespace botox {
     export type API_OPTIONS = botox_framework_types.API_OPTIONS & {
     }
 
-    export type API_ARG_OPTIONS = botox_framework_types.API_ARG_OPTIONS & {
+    export type API_ARG_OPTIONS<T> = {
+        validatable: botox_framework_types.VALIDATABLE_OPTIONS<T>,
         optional?: true,
         virtual?: true,
     }
@@ -155,48 +149,115 @@ function logging_factory(
 }
 
 function create_route() {
-    const factory = method_decorator_tools();
+    const tools = decorator_tools.method_tools(decorator_tools.create_key<botox.ROUTE_OPTIONS>());
 
-    const route = factory.create(
-        create_decorator => <
-            T,
-            P extends `${botox.ROUTE_OPTIONS["method"]} ${botox.ROUTE_OPTIONS["route"]}`,
-            D,
-        >(
+    const route = <
+        T,
+        P extends `${botox.ROUTE_OPTIONS["method"]} ${botox.ROUTE_OPTIONS["route"]}`,
+        D,
+    >(
 
-        ) => create_decorator<T, P, D>(
-            (ctx) => {
-                let method: botox.ROUTE_OPTIONS["method"];
-                let route : botox.ROUTE_OPTIONS["route"];
+    ) => tools.create_decorator<T, P, D>(
+        (ctx) => {
+            let method: botox.ROUTE_OPTIONS["method"];
+            let route : botox.ROUTE_OPTIONS["route"];
 
-                [ method, route ] = ctx.property.split(' ', 2) as any;
+            [ method, route ] = ctx.property.split(' ', 2) as any;
 
-                let options: botox.ROUTE_OPTIONS = {
-                    method,
-                    route,
-                };
+            let options: botox.ROUTE_OPTIONS = {
+                method,
+                route,
+            };
 
-                ctx.design_types.parameters.forEach(
-                    (v, i) => {
-                        switch (v) {
-                            case botox.Req: options.req_index = i; break;
-                            case botox.Res: options.res_index = i; break;
-                        }
+            ctx.design_types.parameters.forEach(
+                (v, i) => {
+                    switch (v) {
+                        case botox.Req: options.req_index = i; break;
+                        case botox.Res: options.res_index = i; break;
                     }
-                );
+                }
+            );
 
-                return options;
-            }
-        ).as_setter<botox.ROUTE_OPTIONS>()
-    );
+            return options;
+        }
+    ).as_setter();
 
-    return route[expandify.expand]({
+    return Object.assign(route, {
 
         for_each_route: (
             target: any,
             cb: (p: PropertyKey, options: botox.ROUTE_OPTIONS) => void,
-        ) => factory.get_registry[metadata_registry.get_properties](target).for_each(
+        ) => tools.get_registry[metadata_registry.get_properties](target).for_each(
             (p, gr) => cb(p, gr().get()!)
         )
+    })
+}
+
+function create_api() {
+    const tools = decorator_tools.class_tools(decorator_tools.create_key<botox.API_OPTIONS>());
+    const api = <T extends botox.Api>() => tools.create_decorator<CONSTRUCTOR<T>>(() => ({}))
+    return Object.assign(api, {
+        get_options: (api: CONSTRUCTOR<botox.Api>) => tools.get_registry(api).get_own(),
+    })
+}
+
+function create_api_arg(
+    get_validatable_options: (type: any) => botox_framework_types.VALIDATABLE_OPTIONS,
+) {
+    const tools = decorator_tools.property_tools(decorator_tools.create_key<botox.API_ARG_OPTIONS<unknown>>());
+
+    const api_arg = <
+        T extends botox.Api,
+        P,
+    >(
+    ) => tools.create_decorator<T, P>(
+        (ctx) => {
+            return {
+                validatable: get_validatable_options(ctx.design_type),
+            }
+        }
+    ).as_setter() as SETTER<T, P>;
+
+    type SETTER<T, P> = property_decorator_tools.DECORATOR<T, P> & {
+        [ K in keyof Required<botox.API_ARG_OPTIONS<unknown>> ] :
+            <
+                T1 extends T,
+                P1 extends P,
+                V1 extends P_OF_T<P1, T1>,
+            >(
+                value: botox.API_ARG_OPTIONS<V1>[K] & ThisType<T1>
+            ) => SETTER<T1, P1>
+    }
+
+    return Object.assign(api_arg, {
+        for_each_arg: <
+            T extends botox.Api,
+            P extends keyof T,
+        >(
+            api: botox.Api,
+            callback: (p: P, options: botox.API_ARG_OPTIONS<any>) => void,
+        ) => tools.get_registry[metadata_registry.get_properties](api).for_each(
+            (p, gr) => callback(p, gr().get()!)
+        )
+    })
+}
+
+function create_module() {
+    const tools = decorator_tools.class_tools(
+        decorator_tools.create_key<botox.MODULE_OPTIONS>(),
+    );
+
+    const module = <T>() => tools.create_decorator<T>(() => ({})).as_setter();
+
+    return Object.assign(module, {
+
+        get_options: (module: CONSTRUCTOR<botox.Module>) => tools.get_registry(module).get_own(),
+
+        resolve_dependencies(modules: CONSTRUCTOR<botox.Module>[]) {
+            return botox_module_factory.resolve_dependencies(
+                modules,
+                m => this.get_options(m)?.dependencies?.()
+            )
+        }
     })
 }

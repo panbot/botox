@@ -1,14 +1,16 @@
 import expandify from "../lib/expandify";
 import types from "./types";
-import class_decorator_tools from "../lib/decorator-tools/class";
 import assert from 'node:assert';
+import { MAYBE } from "../lib/types";
 
 import OPTIONS = types.VALIDATABLE_OPTIONS;
+import decorator_tools from "../lib/decorator-tools";
+
 function botox_validatable_factory() {
 
-    let factory = class_decorator_tools();
+    let tools = decorator_tools.class_tools(decorator_tools.create_key<OPTIONS>());
 
-    type CONSTRUCTOR<T>
+    type TYPE_OF<T>
         = T extends string
         ? StringConstructor
         : T extends number
@@ -18,24 +20,24 @@ function botox_validatable_factory() {
         : abstract new (...args: any) => T
     ;
 
-    let validatable = factory.create(
-        create_decorator => <T>(
-            parser     : OPTIONS<T>["parser"],
-            validator? : OPTIONS<T>["validator"],
-        ) => create_decorator<CONSTRUCTOR<T>>(
-            (ctx): OPTIONS<T> => ({
-                parser,
-                validator,
-            })
-        )
+    let validatable = <T>(
+        parser     : OPTIONS<T>["parser"],
+        validator? : OPTIONS<T>["validator"],
+    ) => tools.create_decorator<TYPE_OF<T>>(
+        (): OPTIONS<T> => ({
+            parser,
+            validator,
+        })
     );
 
-    return validatable[expandify.expand]({
+    let expandable = expandify(validatable);
 
-        get_options: (type: any) => factory.get_registry(type).get(),
+    return expandable[expandify.expand]({
 
-        "get_options!": (type: any) => {
-            let options = factory.get_registry(type).get();
+        get_options: <T>(type: TYPE_OF<T>): MAYBE<OPTIONS<T>> => tools.get_registry(type).get(),
+
+        "get_options!": <T>(type: TYPE_OF<T>): OPTIONS<T> => {
+            let options = tools.get_registry(type).get();
             if (!options) options = { parser: () => assert(false, 'not validatable') }
             return options;
         },

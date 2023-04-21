@@ -1,6 +1,7 @@
 import { IncomingMessage, ServerResponse } from "http";
-import expandify from "@/lib/expandify";
 import method_decorator_tools from '@/lib/decorator-tools/method';
+import { typram } from "@/lib/types";
+import assert from "node:assert";
 
 type ALLOWED_HTTP_METHOD
     = 'GET'
@@ -18,27 +19,26 @@ type OPTIONS = {
 
 {
 
-    const factory = method_decorator_tools();
-    const route = factory.create(create_decorator => <
+    const factory = method_decorator_tools(typram<OPTIONS>());
+    const route =  <
         T,
         P extends `${ALLOWED_HTTP_METHOD} /${string}`,
         D,
     >(
 
-    ) => create_decorator<T, P, D>(
+    ) => factory.create_decorator<T, P, D>(
         ctx => {
             console.log(ctx);
-            const [ method, route ] = ctx.property.split(' ', 2);
+            const [ http_method, route ] = ctx.property.split(' ', 2);
+            assert(http_method);
+            assert(route);
             return {
-                method,
+                http_method,
                 route,
                 parameters: ctx.design_types.parameters,
             }
         }
-    ).as_setter<OPTIONS>())[expandify.expand]({
-        get_options: <T>(target: T, property: keyof T) => factory.get_registry(target, property).get(),
-    })
-
+    ).as_setter();
 
     class Req extends IncomingMessage {}
     class Res extends ServerResponse<Req> {}
@@ -76,6 +76,8 @@ type OPTIONS = {
 
     }
 
-    console.log(route.get_options(new A, 'GET /api'));
-    console.log(route.get_options(new A, 'POST /api'));
+    const get_options = <T>(target: T, property: keyof T) => factory.get_registry(target, property).get();
+
+    console.log(get_options(new A, 'GET /api'));
+    console.log(get_options(new A, 'POST /api'));
 }

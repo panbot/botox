@@ -43,3 +43,5 @@ export type FALSY
     | undefined
     | void
 ;
+
+export type P_OF_T<P, T, ELSE = never> = P extends keyof T ? T[P] : ELSE;
