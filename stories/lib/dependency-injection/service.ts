@@ -35,7 +35,7 @@ console.log(container.get(token));
 console.log(container.get(name));
 
 {
-    let c = container.get(MyController);
+    let c = container.instantiate(MyController);
     assert_true< IS< typeof c, MyController > >();
     console.log(c);
     console.log(c.s1 == c.s2);

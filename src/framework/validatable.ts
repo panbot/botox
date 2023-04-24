@@ -1,4 +1,3 @@
-import expandify from "../lib/expandify";
 import types from "./types";
 import assert from 'node:assert';
 import { MAYBE } from "../lib/types";
@@ -30,9 +29,7 @@ function botox_validatable_factory() {
         })
     );
 
-    let expandable = expandify(validatable);
-
-    return expandable[expandify.expand]({
+    return Object.assign(validatable, {
 
         get_options: <T>(type: TYPE_OF<T>): MAYBE<OPTIONS<T>> => tools.get_registry(type).get(),
 

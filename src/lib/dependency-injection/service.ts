@@ -1,8 +1,6 @@
-import decorator from "../decorator";
-import expandify from "../expandify";
 import { CONSTRUCTOR, INSTANTIATOR } from "../types";
 import types from "./types";
-import mr from "../metadata-registry";
+import decorator_tools from "../decorator-tools";
 
 export default function (
     instantiate: INSTANTIATOR,
@@ -24,7 +22,7 @@ export default function (
             : by_class(token.services[0]!);
     });
     const by_class = create_get_by((type: CONSTRUCTOR) => {
-        let options = service_decorator.get_options(type);
+        let options = get_options(type);
         if (!options) not_found(`[class: ${type.name}]`);
 
         let instance = options.factory?.(get_service) ?? instantiate(type);
@@ -51,7 +49,7 @@ export default function (
                 case 'get_class' : return by_get_class ( service_key.get_class )
                 case 'factory'   : return by_factory   ( service_key.factory   )
 
-                default: throw new Error('should not be here');
+                default: throw 'should not be here';
             }
         },
     };
@@ -94,31 +92,34 @@ export default function (
 
         constructor (
             public type: CONSTRUCTOR<TARGET>,
-        ) {  }
+        ) { }
     };
 
-    const service_decorator = decorator.create_class_decorator({
-        init_by: (
-            ctx,
-            value?: string | types.Token | types.SERVICE_FACTORY,
-        ) => {
-            let options = new ServiceDecoratorOption(ctx.args[0]);
+    const tools = decorator_tools.class_tools(decorator_tools.create_key<ServiceDecoratorOption>());
+    const service_decorator = <T extends Object>(
+        value?: string | types.Token<T> | types.SERVICE_FACTORY<T>
+    ) => tools.create_decorator<CONSTRUCTOR<T>>(
+        ctx => {
+            let options = new ServiceDecoratorOption(ctx.target);
 
-            if      ( typeof value == 'string'   ) options.name    = value;
-            else if ( typeof value == 'function' ) options.factory = value;
+            if      ( typeof value == 'string'      ) options.name    = value;
+            else if ( typeof value == 'function'    ) options.factory = value;
             else if ( value instanceof types.Token  ) options.token   = value;
+            else throw 'should not be here';
 
             return options;
-        },
-        target: decorator.target<TARGET>(),
-    })[expandify.expand]({
-        get_options(t: CONSTRUCTOR) { return this[mr.get_registry](t).get_own() },
-    });
+        }
+    ).as_setter();
 
-    return service_decorator[expandify.expand]({
+    return Object.assign(service_decorator, {
+        get_options,
         get_service: Object.assign(get_service, getters),
         set_service,
     })
+
+    function get_options<T>(type: CONSTRUCTOR<T>) {
+        return tools.get_registry(type).get_own();
+    }
 
     function create_get_by<T extends [ any ]>(
         cb: (...args: T) => any

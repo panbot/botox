@@ -1,4 +1,3 @@
-import expandify from "@/lib/expandify";
 import { CONSTRUCTOR, FALSY, IS } from "@/lib/types";
 import { assert_type } from "stories/asserts";
 
