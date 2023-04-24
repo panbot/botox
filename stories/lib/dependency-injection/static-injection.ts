@@ -1,4 +1,4 @@
-import di from '@/lib/dependency-injection';
+import di from '@/dependency-injection';
 const container = di();
 
 class Service {}

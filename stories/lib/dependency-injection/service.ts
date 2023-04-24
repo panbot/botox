@@ -1,5 +1,5 @@
-import di from '@/lib/dependency-injection';
-import { IS } from '@/lib/types';
+import di from '@/dependency-injection';
+import { IS } from '@/types';
 import { assert_true } from 'stories/asserts';
 
 const container = di();

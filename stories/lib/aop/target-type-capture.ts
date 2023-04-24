@@ -1,5 +1,5 @@
-import aop_factory from "@/lib/aop/factory";
-import { IS } from "@/lib/types";
+import aop_factory from "@/aop/factory";
+import { IS } from "@/types";
 import { assert_true } from "stories/asserts";
 
 {

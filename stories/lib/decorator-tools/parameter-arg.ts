@@ -1,5 +1,5 @@
-import { typram } from "@/lib/types";
-import parameter_decorator_tools from '@/lib/decorator-tools/parameter';
+import { typram } from "@/types";
+import parameter_decorator_tools from '@/decorator-tools/parameter';
 
 type OPTIONS<T> = {
     parse: (v: unknown) => T,

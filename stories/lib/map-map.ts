@@ -1,4 +1,4 @@
-import { MapMap } from '@/lib/map-map';
+import { MapMap } from '@/map-map';
 
 let map1 = new MapMap<[ string ], any>();
 map1.set('a', 'stuff');

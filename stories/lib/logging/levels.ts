@@ -1,8 +1,8 @@
-import di from '@/lib/dependency-injection';
-import proxitive_aop from '@/lib/aop/proxitive';
-import logging from '@/lib/logging';
+import di from '@/dependency-injection';
+import proxitive_aop from '@/aop/proxitive';
+import logging from '@/logging';
 import { assert_true } from 'stories/asserts';
-import { IS } from '@/lib/types';
+import { IS } from '@/types';
 
 const levels = {
     debug : 0,

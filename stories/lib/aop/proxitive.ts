@@ -1,5 +1,5 @@
-import aop from '@/lib/aop/proxitive';
-import { CONSTRUCTOR } from '@/lib/types';
+import aop from '@/aop/proxitive';
+import { CONSTRUCTOR } from '@/types';
 
 export const { before, after, around } = aop(p => instantiate.proxifier = p);
 

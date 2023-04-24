@@ -1,6 +1,6 @@
 import { IncomingMessage, ServerResponse } from "http";
-import method_decorator_tools from '@/lib/decorator-tools/method';
-import { typram } from "@/lib/types";
+import method_decorator_tools from '@/decorator-tools/method';
+import { typram } from "@/types";
 import assert from "node:assert";
 
 type ALLOWED_HTTP_METHOD

@@ -1,4 +1,4 @@
-import botox_framework_types from "../../framework/types";
+import { METHODS } from "../types";
 import desctructive_aop_factory from "./desctructive";
 import aop_factory from "./factory";
 
@@ -7,7 +7,7 @@ function injective_aop_factory() {
 
     return <
         T extends Object,
-        M extends botox_framework_types.METHODS<T>,
+        M extends METHODS<T>,
         ARGS extends any[] = aop_factory.ARGS<T[M]>,
         RESULT = aop_factory.RETURN_TYPE<T[M]>,
         D = (...args: ARGS) => RESULT,

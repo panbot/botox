@@ -1,4 +1,4 @@
-import injective_aop_factory from "@/lib/aop/injective";
+import injective_aop_factory from "@/aop/injective";
 
 const inject = injective_aop_factory();
 

@@ -1,5 +1,5 @@
-import property_decorator_tools from '@/lib/decorator-tools/property';
-import { P_OF_T, typram } from '@/lib/types';
+import property_decorator_tools from '@/decorator-tools/property';
+import { P_OF_T, typram } from '@/types';
 
 type OPTIONS<T> = {
     parse?: (v: unknown) => T,

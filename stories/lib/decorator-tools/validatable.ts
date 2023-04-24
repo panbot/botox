@@ -1,4 +1,4 @@
-import { FALSY, typram } from "@/lib/types";
+import { FALSY } from "@/types";
 
 export default null;
 

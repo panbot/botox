@@ -1,6 +1,6 @@
 import { inspect } from "util";
 
-namespace botox_module_factory {
+namespace framework {
 
     export function resolve_dependencies<T>(
         modules: T[],
@@ -33,4 +33,4 @@ namespace botox_module_factory {
     }
 }
 
-export default botox_module_factory
+export default framework

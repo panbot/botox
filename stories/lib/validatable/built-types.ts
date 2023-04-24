@@ -1,4 +1,4 @@
-import botox_validatable_factory from "@/framework/validatable";
+import botox_validatable_factory from "@/validatable";
 const btx_validatable = botox_validatable_factory();
 
 function validate_type(input: any, type: any) {

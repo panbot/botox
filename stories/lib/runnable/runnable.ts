@@ -1,5 +1,5 @@
-import runnable from "@/lib/runnable";
-import { IS } from "@/lib/types";
+import runnable from "@/runnable";
+import { IS } from "@/types";
 import { assert_true } from "stories/asserts";
 
 async function testRun() {

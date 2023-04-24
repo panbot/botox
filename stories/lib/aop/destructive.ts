@@ -1,4 +1,4 @@
-import aop from '@/lib/aop/desctructive';
+import aop from '@/aop/desctructive';
 
 const { before, after, around } = aop();
 

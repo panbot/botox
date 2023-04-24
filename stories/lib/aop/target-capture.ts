@@ -1,5 +1,5 @@
-import aop from '@/lib/aop/desctructive';
-import { IS } from '@/lib/types';
+import aop from '@/aop/desctructive';
+import { IS } from '@/types';
 import { assert_true } from 'stories/asserts';
 
 const { before, after, around } = aop();

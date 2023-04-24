@@ -1,5 +1,5 @@
-import dependency_injection from '@/lib/dependency-injection';
-import di from '@/lib/dependency-injection';
+import dependency_injection from '@/dependency-injection';
+import di from '@/dependency-injection';
 
 const container = di();
 const { service, inject } = container;

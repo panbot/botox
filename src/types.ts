@@ -45,3 +45,17 @@ export type FALSY
 ;
 
 export type P_OF_T<P, T, ELSE = never> = P extends keyof T ? T[P] : ELSE;
+
+export type METHODS<T> = keyof {
+    [ P in keyof T as T[P] extends (...args: any) => any ? P : never ]: any
+}
+
+export type METHOD_INVOKER = <
+    T,
+    K extends METHODS<T>,
+    ARGS extends T[K] extends (...args: infer U) => any ? U : never
+>(
+    target: T,
+    method: K,
+    args: ARGS
+) => T[K] extends (...args: any) => infer U ? U : never

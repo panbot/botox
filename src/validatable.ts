@@ -1,13 +1,9 @@
-import types from "./types";
-import assert from 'node:assert';
-import { MAYBE } from "../lib/types";
+import decorator_tools from "./decorator-tools";
+import { FALSY, MAYBE } from "./types";
 
-import OPTIONS = types.VALIDATABLE_OPTIONS;
-import decorator_tools from "../lib/decorator-tools";
+function validatable() {
 
-function botox_validatable_factory() {
-
-    let tools = decorator_tools.class_tools(decorator_tools.create_key<OPTIONS>());
+    let tools = decorator_tools.class_tools(decorator_tools.create_key<OPTIONS<any>>());
 
     type TYPE_OF<T>
         = T extends string
@@ -35,14 +31,19 @@ function botox_validatable_factory() {
 
         "get_options!": <T>(type: TYPE_OF<T>): OPTIONS<T> => {
             let options = tools.get_registry(type).get();
-            if (!options) options = { parser: () => assert(false, 'not validatable') }
+            if (!options) options = { parser: () => { throw new Error('not validatable') } }
             return options;
         },
     });
 }
 
-namespace botox_validatable_factory {
-    export type VALIDATABLE = ReturnType<typeof botox_validatable_factory>;
+namespace validatable {
+    export type OPTIONS<T> = {
+        parser: (input: unknown) => T
+        validator?: (parsed: T) => string | FALSY
+    }
 }
 
-export default botox_validatable_factory
+import OPTIONS = validatable.OPTIONS;
+
+export default validatable;

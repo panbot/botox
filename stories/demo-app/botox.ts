@@ -1,16 +1,15 @@
-import botox_module_factory from "@/framework/module";
-import botox_framework_types from "@/framework/types";
-import botox_validatable_factory from "@/framework/validatable";
-import di from "@/lib/dependency-injection";
-import runnable from "@/lib/runnable";
-import { CONSTRUCTOR, P_OF_T } from "@/lib/types";
-import logging from '@/lib/logging';
-import aop_factory from "@/lib/aop/factory";
-import proxitive_aop_factory from "@/lib/aop/proxitive";
+import di from "@/dependency-injection";
+import runnable from "@/runnable";
+import { CONSTRUCTOR, P_OF_T } from "@/types";
+import logging from '@/logging';
+import aop_factory from "@/aop/factory";
+import proxitive_aop_factory from "@/aop/proxitive";
 import { IncomingMessage, ServerResponse } from "http";
-import metadata_registry from "@/lib/metadata-registry";
-import decorator_tools from "@/lib/decorator-tools";
-import property_decorator_tools from "@/lib/decorator-tools/property";
+import metadata_registry from "@/metadata-registry";
+import decorator_tools from "@/decorator-tools";
+import property_decorator_tools from "@/decorator-tools/property";
+import validatable_factory from "@/validatable";
+import framework from '@/framework';
 
 namespace botox {
 
@@ -21,7 +20,7 @@ namespace botox {
 
     export const { run, run_arg } = runnable(container.get, 'run');
 
-    export const validatable = botox_validatable_factory();
+    export const validatable = validatable_factory();
     export const api_arg = create_api_arg(validatable["get_options!"]);
     export const api = create_api();
     export const route = create_route();
@@ -88,16 +87,17 @@ namespace botox {
         return typeof o?.['run'] == 'function';
     }
 
-    export type MODULE_OPTIONS = botox_framework_types.MODULE_OPTIONS & {
+    export type MODULE_OPTIONS = {
         apis?: CONSTRUCTOR<Api>[],
         routes?: CONSTRUCTOR[],
+        dependencies?: () => CONSTRUCTOR<Module>[],
     }
 
-    export type API_OPTIONS = botox_framework_types.API_OPTIONS & {
+    export type API_OPTIONS = {
     }
 
     export type API_ARG_OPTIONS<T> = {
-        validatable: botox_framework_types.VALIDATABLE_OPTIONS<T>,
+        validatable: validatable_factory.OPTIONS<T>,
         optional?: true,
         virtual?: true,
     }
@@ -202,7 +202,7 @@ function create_api() {
 }
 
 function create_api_arg(
-    get_validatable_options: (type: any) => botox_framework_types.VALIDATABLE_OPTIONS,
+    get_validatable_options: (type: any) => validatable_factory.OPTIONS<any>,
 ) {
     const tools = decorator_tools.property_tools(decorator_tools.create_key<botox.API_ARG_OPTIONS<unknown>>());
 
@@ -254,7 +254,7 @@ function create_module() {
         get_options: (module: CONSTRUCTOR<botox.Module>) => tools.get_registry(module).get_own(),
 
         resolve_dependencies(modules: CONSTRUCTOR<botox.Module>[]) {
-            return botox_module_factory.resolve_dependencies(
+            return framework.resolve_dependencies(
                 modules,
                 m => this.get_options(m)?.dependencies?.()
             )

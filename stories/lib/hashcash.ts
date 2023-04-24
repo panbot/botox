@@ -1,4 +1,4 @@
-import factory from '@/lib/hashcash';
+import factory from '@/hashcash';
 
 const hashcash = factory('sha256');
 
