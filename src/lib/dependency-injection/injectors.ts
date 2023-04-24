@@ -1,34 +1,36 @@
-import decorator from "../decorator";
-import expandify from "../expandify";
 import { MapMap } from "../map-map";
-import { CONSTRUCTOR, MAYBE } from "../types";
+import { CONSTRUCTOR, P_OF_T } from "../types";
 import types from "./types";
 import mr from "../metadata-registry";
+import decorator_tools from "../decorator-tools";
 
 export default function (
     get_by_service_key: <T>(service_key: types.SERVICE_KEY<T>) => T,
 ) {
-    let injection_events: types.INJECTION[] = [];
-    let injectors = create_injectors();
-
+    let injection_events: types.INJECTION<types.POINT>[] = [];
+    let injectors = {
+        constructor_parameter : create_constructor_parameter_injector(),
+        instance_property     : create_instance_property_injector(),
+        static_property       : create_static_property_injector(),
+    }
     const routes = new MapMap<
         [
             boolean, // typeof target == "function"
             boolean, // property != null
             boolean, // index != null
         ],
-        typeof injectors[keyof typeof injectors]
+        (service?: types.INJECT_SERVICE<any>) => (...args: any) => void
     >();
-    // typeof target == "function" | property | index
-    routes.set(               true ,    false ,  true , injectors.constructor_parameter );
-    routes.set(               true ,     true , false , injectors.static_property       );
-    routes.set(              false ,     true , false , injectors.instance_property     );
+    // typeof target == "function" , property != null , index != null , injector
+    routes.set(               true ,            false ,          true , injectors.constructor_parameter );
+    routes.set(               true ,             true ,         false , injectors.static_property       );
+    routes.set(              false ,             true ,         false , injectors.instance_property     );
 
     return {
         ...injectors,
 
         route: (
-            service: MAYBE<types.INJECT_SERVICE>,
+            service: types.INJECT_SERVICE<any> | undefined,
             args: [ target: any, property: any, index: any ],
         ) => {
             let [ target, property, index ] = args;
@@ -57,7 +59,7 @@ export default function (
     };
 
     function create_injection<P extends types.POINT>(
-        service: types.INJECT_SERVICE,
+        service: types.INJECT_SERVICE<unknown> | undefined,
         point: P,
     ) {
         let injection: types.INJECTION<P> = {
@@ -86,49 +88,71 @@ export default function (
         }
     }
 
-    function create_injectors() {
-        let constructor_parameter = decorator.create_parameter_decorator.constructor({
-            init_by: (
-                { args: [ target, _property, index ], design_type },
-                service: types.INJECT_SERVICE,
-            ) => create_injection(service, { type: 'constructor_parameter', target, index, design_type }),
-            target: decorator.target<Object>(),
-        })[expandify.expand](d => ({
+    function create_constructor_parameter_injector() {
+        let tools = decorator_tools.parameter_tools(
+            decorator_tools.create_key<types.INJECTION<types.CONSTRUCTOR_PARAMETER_POINT>>()
+        );
 
-            instantiate: (ctor: CONSTRUCTOR<any>, args?: any[]) => new ctor(
-                ...d[mr.get_registry](ctor).get()?.reduce(
+        let decorator = <T extends Object, I extends number>(
+            service?: types.INJECT_SERVICE<T>,
+        ) => tools.create_decorator<CONSTRUCTOR<T>, undefined, I>(
+            ({ target, index, design_type }) => create_injection(
+                service,
+                { type: 'constructor_parameter', target, index, design_type }
+            )
+        );
+
+        return Object.assign(decorator, {
+            instantiate: <T>(ctor: CONSTRUCTOR<T>, args?: any[]) => new ctor(
+                ...tools.get_registry(ctor, undefined).get()?.reduce(
                     (pv, cv) => ( pv[cv.point.index] = cv.get_service(), pv ),
                     args ?? []
                 ) ?? [],
             ),
-        }));
+        })
+    }
 
-        let instance_property = decorator.create_property_decorator.instance({
-            init_by: (
-                { args: [ target, property ], design_type },
-                service: types.INJECT_SERVICE,
-            ) => create_injection(service, { type: 'instance_property', target, property, design_type }),
-            target: decorator.target<Object>(),
-        })[expandify.expand](d => ({
+    function create_instance_property_injector() {
+        let tools = decorator_tools.property_tools(
+            decorator_tools.create_key<types.INJECTION<types.INSTANCE_PROPERTY>>()
+        );
 
-            inject: (instance: Object) => d[mr.get_registry][mr.get_properties](instance).for_each(
+        let decorator = <T extends Object, P extends PropertyKey>(
+            service?: types.INJECT_SERVICE<P_OF_T<P, T>>
+        ) => tools.create_decorator<T, P>(
+            ({ target, property, design_type }) => create_injection(
+                service,
+                { type: 'instance_property', target, property, design_type }
+            )
+        );
+
+        return Object.assign(decorator, {
+            inject: (instance: Object) => tools.get_registry[mr.get_properties](instance).for_each(
                 (property, get_registry) => Reflect.defineProperty(
                     instance,
                     property,
                     { value: get_registry().get()!.get_service() }
                 )
             ),
-        }));
+        })
+    }
 
-        let static_property = decorator.create_property_decorator.static({
-            init_by: (
-                { args: [ target, property ], design_type },
-                service: types.INJECT_SERVICE,
-            ) => create_injection(service, { type: 'static_property', target, property, design_type }),
-            target: decorator.target<Object>(),
-        })[expandify.expand](d => ({
+    function create_static_property_injector() {
+        let tools = decorator_tools.property_tools(
+            decorator_tools.create_key<types.INJECTION<types.STATIC_PROPERTY>>()
+        );
 
-            inject: (ctor: CONSTRUCTOR<Object>) => d[mr.get_registry][mr.get_properties](ctor).for_each(
+        let decorator = <T extends CONSTRUCTOR<Object>, P extends PropertyKey>(
+            service?: types.INJECT_SERVICE<P_OF_T<P, T>>
+        ) => tools.create_decorator<T, P>(
+            ({ target, property, design_type }) => create_injection(
+                service,
+                { type: 'static_property', target, property, design_type }
+            )
+        );
+
+        return Object.assign(decorator, {
+            inject: (ctor: CONSTRUCTOR<Object>) => tools.get_registry[mr.get_properties](ctor).for_each(
                 (property, get_registry) => Reflect.defineProperty(
                     ctor, property,
                     {
@@ -137,12 +161,6 @@ export default function (
                     }
                 )
             ),
-        }));
-
-        return {
-            constructor_parameter,
-            instance_property,
-            static_property,
-        }
+        })
     }
 }

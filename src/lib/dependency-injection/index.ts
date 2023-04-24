@@ -28,8 +28,8 @@ function dependency_injection() {
         <T, P extends P_EXTENDS<T>, I extends I_EXTENDS<P>>(token    :       types.Token<TYPE<T, P, I>>) : DECORATOR<T, P, I>
         <T, P extends P_EXTENDS<T>, I extends I_EXTENDS<P>>(get_type : () => CONSTRUCTOR<TYPE<T, P, I>>) : DECORATOR<T, P, I>
         <T, P extends P_EXTENDS<T>, I extends I_EXTENDS<P>>(service  : types.SERVICE_KEY<TYPE<T, P, I>>) : DECORATOR<T, P, I>
-     } = (
-        service?: types.INJECT_SERVICE
+    } = (
+        service?: types.INJECT_SERVICE<any>
     ) => (
         target: Object, property?: PropertyKey, index?: number
     ) => {
@@ -113,6 +113,7 @@ type DECORATOR<
     P extends P_EXTENDS<T>,
     I extends I_EXTENDS<P>,
 > = (target: T, property?: P, index?: I) => void
+
 import TYPE = dependency_injection.TYPE
 import P_EXTENDS = dependency_injection.P_EXTENDS
 import I_EXTENDS = dependency_injection.I_EXTENDS

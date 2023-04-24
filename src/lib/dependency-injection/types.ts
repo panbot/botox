@@ -43,30 +43,40 @@ namespace dependency_injection_types {
         <T>(servic_key  : SERVICE_KEY<T> ): T
     }
 
-    export type POINT = ({
-        type     : "constructor_parameter"
-        target   : CONSTRUCTOR<Object>
-        index    : number
-    } | {
-        type     : "static_property"
-        target   : CONSTRUCTOR<Object>
-        property : PropertyKey
-    } | {
-        type     : "instance_property"
-        target   : Object
-        property : PropertyKey
-    }) & { design_type: any }
+    export type CONSTRUCTOR_PARAMETER_POINT = {
+        type        : 'constructor_parameter'
+        target      : CONSTRUCTOR<Object>
+        index       : number
+        design_type : any
+    }
+    export type STATIC_PROPERTY = {
+        type        : 'static_property'
+        target      : CONSTRUCTOR<Object>
+        property    : PropertyKey
+        design_type : any
+    }
+    export type INSTANCE_PROPERTY = {
+        type        : 'instance_property'
+        target      : Object
+        property    : PropertyKey
+        design_type : any
+    }
+    export type POINT
+        = CONSTRUCTOR_PARAMETER_POINT
+        | STATIC_PROPERTY
+        | INSTANCE_PROPERTY
+    ;
 
-    export type INJECTION<P extends POINT = POINT> = {
+    export type INJECTION<P extends POINT> = {
         point: P,
         get_service: () => any,
     }
 
-    export type INJECT_SERVICE = MAYBE<string | Token | ( () => CONSTRUCTOR ) | SERVICE_KEY>
+    export type INJECT_SERVICE<T> = string | Token<T> | ( () => CONSTRUCTOR<T> ) | SERVICE_KEY<T>
 
     export type EVENT_HANDLERS = {
         'instantiated': <T>(instance: T) => T,
-        'injection': (injection: INJECTION) => void,
+        'injection': (injection: INJECTION<POINT>) => void,
     }
 
     export type EVENT = keyof EVENT_HANDLERS
