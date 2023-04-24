@@ -2,10 +2,10 @@ import factory from '@/lib/hashcash';
 
 const hashcash = factory('sha256');
 
-@hashcash.install(5)
+@hashcash.protect(5)
 class MyProtectedApi {
 
-    @hashcash.install(5)
+    @hashcash.protect(5)
     some_method() {
 
     }

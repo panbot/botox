@@ -81,7 +81,7 @@ const factory = <T>(
 
 const inject = injective_aop_factory();
 function metadata_registry<
-    ARGS extends [ target: Object, property?: MAYBE<PropertyKey> ],
+    ARGS extends [ target: Object, property?: PropertyKey ],
 >(
     _args: typram.Typram<ARGS>,
 ) { return (

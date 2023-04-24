@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
-import decorator from "./decorator";
 import mr from "./metadata-registry";
+import decorator_tools from "./decorator-tools";
+import { typram } from "./types";
 
 export namespace hashcash {
     export type OPTIONS = {
@@ -8,10 +9,8 @@ export namespace hashcash {
         difficulty: number
     }
 
-    export type ALGORITHM
-        = 'sha256'
-    ;
-}
+    export type ALGORITHM = string;
+  }
 
 function consume_hashcash(
     algorithm: hashcash.ALGORITHM,
@@ -25,21 +24,18 @@ function consume_hashcash(
 
 export default function(algorithm: hashcash.ALGORITHM = 'sha256') {
 
-    const installer = decorator.create_prototype_property({
-        init_by: (
-            _ctx,
-            difficulty: number,
-        ) => ({
-            difficulty,
-            algorithm,
-        } satisfies hashcash.OPTIONS),
-    });
+    const get_request_registry  = mr.class_factory(mr.create_key<{ zeros: number }>());
+    const get_resource_registry = mr(typram<[ target: any, property?: any ]>())(false)(mr.create_key<{ difficulty: number }>())
 
-    const get_request_registry = mr.class_factory(mr.create_key<{ zeros: number }>());
+    const decorator = (
+        difficulty: number
+    ) => (
+        target: any, property?: any
+    ) => void get_resource_registry(target, property).set({ difficulty });
 
     return {
 
-        install: installer,
+        protect: decorator,
 
         get_resource_difficulty,
 
@@ -67,7 +63,7 @@ export default function(algorithm: hashcash.ALGORITHM = 'sha256') {
 
     function get_resource_difficulty(target: Object, property?: PropertyKey) {
         if (!property && typeof target != 'function') target = target.constructor;
-        return installer[mr.get_registry](target, property).get()?.difficulty ?? 0;
+        return get_resource_registry(target, property).get()?.difficulty ?? 0;
     }
 
     function get_provided_difficulty(request: Object) {
