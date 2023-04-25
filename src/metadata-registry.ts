@@ -14,7 +14,7 @@ namespace inventory {
         key: KEY<any>, target: Object, p: MAYBE<PropertyKey>
     ) => factory(
         key as KEY<MAYBE<PropertyKey>[]>, target, property_key
-    ).get_or_set([]).push(p);
+    ).get_or_set(() => []).push(p);
 
     export const get_properties = <
         P extends MAYBE<PropertyKey>
@@ -69,10 +69,11 @@ const factory = <T>(
         get_own: () => Reflect.getOwnMetadata(key,    ...scheme(target, property)) as MAYBE<T>,
         set: (v: T) => Reflect.defineMetadata(key, v, ...scheme(target, property)),
 
-        get_or_set(v: T) {
+        get_or_set(get_value: () => T) {
             let u = this.get_own();
             if (u != null) return u;
 
+            let v = get_value();
             this.set(v);
             return v;
         },
@@ -120,7 +121,7 @@ namespace metadata_registry {
         get(): MAYBE<T>
         get_own(): MAYBE<T>
         set(value: T): void
-        get_or_set(v: T): T
+        get_or_set(get_value: () => T): T
     }
 
     export const create_key = typram.factory<any>();

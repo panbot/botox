@@ -29,7 +29,7 @@ function runnable<M extends PropertyKey>(
             proto: O,
             method: P,
             index: I,
-        ) => void get_registry(proto, method).get_or_set([]).push({ index, Factory, args }),
+        ) => void get_registry(proto, method).get_or_set(() => []).push({ index, Factory, args }),
     }
 
     async function run<

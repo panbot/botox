@@ -30,7 +30,7 @@ function parameter_decorator_tools<OPTIONS extends {}>(
         let cache: any = {};
 
         const decorator = (target: T, property: P, index: I) => {
-            let list = get_registry(target, property).get_or_set([]);
+            let list = get_registry(target, property).get_or_set(() => []);
             let options = list[index as any] = list[index as any] ?? init_options({
                 target, property, index,
                 design_type: Reflect.getOwnMetadata('design:paramtypes', target as any, property as any)[index],

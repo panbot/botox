@@ -22,7 +22,7 @@ function proxitive_aop_factory(
         return proxy
     })
 
-    return aop_factory((t, m, _d, r) => get_registry(t, m).get_or_set([]).push(r))
+    return aop_factory((t, m, _d, r) => get_registry(t, m).get_or_set(() => []).push(r))
 }
 
 namespace proxitive_aop_factory {

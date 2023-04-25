@@ -22,9 +22,9 @@ function class_decorator_tools<OPTIONS extends {}>(
         let cache: any = {};
 
         const decorator = (target: T) => {
-            let options = get_registry(target).get_or_set(init_options({
+            let options = get_registry(target).get_or_set(() => init_options({
                 target
-            }) as any);
+            }));
             Object.assign(options, cache);
         }
 

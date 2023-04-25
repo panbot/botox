@@ -30,7 +30,7 @@ function method_decorator_tools<OPTIONS extends {}>(
         let cache: any = {};
 
         const decorator = (target: T, property: P, descriptor: TypedPropertyDescriptor<D>) => {
-            let options = get_registry(target, property).get_or_set(init_options({
+            let options = get_registry(target, property).get_or_set(() => init_options({
                 target, property, descriptor,
                 design_types: {
                     parameters : Reflect.getOwnMetadata('design:paramtypes', target as any, property as any),

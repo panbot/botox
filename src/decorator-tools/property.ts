@@ -25,7 +25,7 @@ function property_decorator_tools<OPTIONS extends {}>(
         let cache: any = {};
 
         const decorator = (target: T, property: P) => {
-            let options = get_registry(target, property).get_or_set(init_options({
+            let options = get_registry(target, property).get_or_set(() => init_options({
                 target, property,
                 design_type: Reflect.getOwnMetadata('design:type', target as any, property as any),
             }));
