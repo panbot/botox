@@ -70,8 +70,4 @@ class AutoUpdateCache implements Cache {
 
         return this.value;
     }
-
-    start_timer() {
-
-    }
 }
