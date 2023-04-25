@@ -65,9 +65,10 @@ const factory = <T>(
         get   target() { return target   },
         get property() { return property },
 
-        get:     () => Reflect.getMetadata   (key,    ...scheme(target, property)) as MAYBE<T>,
-        get_own: () => Reflect.getOwnMetadata(key,    ...scheme(target, property)) as MAYBE<T>,
-        set: (v: T) => Reflect.defineMetadata(key, v, ...scheme(target, property)),
+        get:     () => Reflect.getMetadata   (key,       ...scheme(target, property)) as MAYBE<T>,
+        get_own: () => Reflect.getOwnMetadata(key,       ...scheme(target, property)) as MAYBE<T>,
+        set: (v: T) => Reflect.defineMetadata(key, v   , ...scheme(target, property)),
+        clear:   () => Reflect.defineMetadata(key, null, ...scheme(target, property)),
 
         get_or_set(get_value: () => T) {
             let u = this.get_own();
@@ -121,6 +122,7 @@ namespace metadata_registry {
         get(): MAYBE<T>
         get_own(): MAYBE<T>
         set(value: T): void
+        clear(): void
         get_or_set(get_value: () => T): T
     }
 
