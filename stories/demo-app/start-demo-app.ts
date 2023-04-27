@@ -1,6 +1,6 @@
 import { init_modules } from "./bootstrap";
 import botox from "./botox";
-import { CONSTRUCTOR } from "@/lib/types";
+import { CONSTRUCTOR } from "@/types";
 import create_http_server from "./services/http-server";
 
 export default class {
@@ -31,16 +31,13 @@ export default class {
 
             let args: any[] = [];
 
-            if (options.req_index != null) args[options.req_index] = req;
-            if (options.res_index != null) args[options.res_index] = res;
-
             if (options.content_type && options.content_type != req.headers["content-type"]) {
                 res.statusCode = 415;
                 res.end();
                 return;
             }
 
-            instance[property](...args);
+            instance[property](req, res);
         });
     }
 }

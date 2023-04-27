@@ -1,6 +1,6 @@
-import { CONSTRUCTOR } from "@/lib/types";
+import { CONSTRUCTOR } from "@/types";
 import botox from "../botox";
-import { MapMap } from "@/lib/map-map";
+import { MapMap } from "@/map-map";
 
 @botox.container.service()
 export class ApiLookup {

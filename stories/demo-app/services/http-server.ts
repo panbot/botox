@@ -1,5 +1,4 @@
 import { IncomingMessage, ServerResponse, createServer } from "http";
-import { parse } from "url";
 
 type HANDLER = (req: IncomingMessage, res: ServerResponse<IncomingMessage>) => void
 
@@ -19,8 +18,7 @@ function create_http_server(
             return;
         }
 
-        const url = parse(req.url, true);
-        const route = routes.find(r => r.route == url.pathname && r.method == req.method);
+        const route = routes.find(r => req.url?.startsWith(r.route) && r.method == req.method);
         if (!route) {
             res.statusCode = 404;
             res.end('404 not found');

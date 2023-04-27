@@ -49,7 +49,7 @@ export default function (
                 case 'get_class' : return by_get_class ( service_key.get_class )
                 case 'factory'   : return by_factory   ( service_key.factory   )
 
-                default: throw 'should not be here';
+                default: throw new Error('should not be here');
             }
         },
     };
@@ -105,7 +105,6 @@ export default function (
             if      ( typeof value == 'string'      ) options.name    = value;
             else if ( typeof value == 'function'    ) options.factory = value;
             else if ( value instanceof types.Token  ) options.token   = value;
-            else throw 'should not be here';
 
             return options;
         }

@@ -1,7 +1,7 @@
 import { join } from "path";
 import botox from "./botox";
 
-botox.invoke_api(get_api()).catch(e => console.error(e));
+botox.invoke_api(get_api()).catch(e => console.trace(e));
 
 function get_api() {
     let file_default_export = require(join(process.cwd(), process.argv[2] ?? usage())).default;

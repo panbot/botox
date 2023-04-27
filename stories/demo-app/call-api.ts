@@ -1,7 +1,7 @@
 import { init_modules } from "./bootstrap";
 import { ApiLookup } from "./services/api-lookup";
 import botox from "./botox";
-import { CONSTRUCTOR } from "@/lib/types";
+import { CONSTRUCTOR } from "@/types";
 import { RequestContext } from "./services/request-context";
 import assert from "assert";
 

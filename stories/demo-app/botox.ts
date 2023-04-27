@@ -10,6 +10,7 @@ import decorator_tools from "@/decorator-tools";
 import property_decorator_tools from "@/decorator-tools/property";
 import validatable_factory from "@/validatable";
 import framework from '@/framework';
+import jwt_factory from './services/jwt';
 
 namespace botox {
 
@@ -21,17 +22,28 @@ namespace botox {
     export const { run, run_arg } = runnable(container.get, 'run');
 
     export const validatable = validatable_factory();
+    validatable["set options for built-in types"]();
     export const api_arg = create_api_arg(validatable["get_options!"]);
     export const api = create_api();
     export const route = create_route();
 
-    export class Req extends IncomingMessage {}
-    export class Res extends ServerResponse<IncomingMessage> {}
+    export const Req = IncomingMessage;
+    export type  Req = IncomingMessage;
+    export const Res = ServerResponse<IncomingMessage>;
+    export type  Res = ServerResponse<IncomingMessage>;
+
+    export const jsonable = create_jsonable()
 
     export const module = create_module();
 
+    export type APP_PARAMETERS = {
+        secret: string,
+    }
+
     export const tokens = {
-        enabled_modules: container.create_token<CONSTRUCTOR<Module>[]>('enabled modules'),
+        enabled_modules : container.create_token<CONSTRUCTOR<Module>[]>('enabled modules'),
+        jwt_factory     : container.create_token<(salt: string) => { encode: (v: any) => string, decode: (v: string) => any }>('jwt factory'),
+        parameters      : container.create_token<APP_PARAMETERS>('app parameters'),
     }
     type TOKENS = typeof tokens;
 
@@ -58,20 +70,25 @@ namespace botox {
         api: Api,
         params?: any,
     ) {
-        api_arg.for_each_arg(api, (p, arg) => {
-            let input = params?.[p];
-            if (input == null) {
-                if (arg.optional) return;
-                if (!arg.virtual) throw new Error(`${p.toString()} is required`);
-            }
+        try {
+            api_arg.for_each_arg(api, (p, arg) => {
+                let input = params?.[p];
+                if (input == null) {
+                    if (arg.optional) return;
+                    if (!arg.virtual) throw `${p.toString()} is required`;
+                }
 
-            const { parser, validator } = arg.validatable;
-            let value = parser.call(api, input);
-            let error = validator?.call(api, value);
-            if (error) throw error;
+                const { parser, validator } = arg.validatable;
+                let value = parser.call(api, input);
+                let error = validator?.call(api, value);
+                if (error) throw error;
 
-            api[p] = value;
-        });
+                api[p] = value;
+            });
+        } catch (e: any) {
+            throw new ArgumentError(e.message || e);
+        }
+
         return run(api)
     }
 
@@ -106,8 +123,6 @@ namespace botox {
         route: `/${string}`,
         method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'HEAD',
         content_type?: string,
-        req_index?: number;
-        res_index?: number;
     }
 
     export namespace logging {
@@ -116,6 +131,11 @@ namespace botox {
         export const loggers = logging.loggers;
         export const decorators = logging.decorators;
     }
+
+    export class ArgumentError extends Error {
+    }
+
+    export const jwt = jwt_factory('change this', 'sha256');
 }
 
 export default botox;
@@ -154,7 +174,7 @@ function create_route() {
     const route = <
         T,
         P extends `${botox.ROUTE_OPTIONS["method"]} ${botox.ROUTE_OPTIONS["route"]}`,
-        D,
+        D extends (req: botox.Req, res: botox.Res) => void,
     >(
 
     ) => tools.create_decorator<T, P, D>(
@@ -168,15 +188,6 @@ function create_route() {
                 method,
                 route,
             };
-
-            ctx.design_types.parameters.forEach(
-                (v, i) => {
-                    switch (v) {
-                        case botox.Req: options.req_index = i; break;
-                        case botox.Res: options.res_index = i; break;
-                    }
-                }
-            );
 
             return options;
         }
@@ -259,5 +270,24 @@ function create_module() {
                 m => this.get_options(m)?.dependencies?.()
             )
         }
+    })
+}
+
+function create_jsonable() {
+    const tools = decorator_tools.class_tools(
+        decorator_tools.create_key<{ serialize: (o: any) => string }>(),
+    );
+
+    const jsonable = <T>(
+        serialize: (o: any) => string
+    ) => tools.create_decorator<T>(() => ({ serialize }))
+
+    return Object.assign(jsonable, {
+        stringify: (o: any) => JSON.stringify(
+            o,
+            (_, v) => (
+                v?.constructor && tools.get_registry(v.constructor).get()?.serialize(v)
+            ) ?? v
+        )
     })
 }

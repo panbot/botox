@@ -1,4 +1,4 @@
-import runnable from "@/lib/runnable";
+import runnable from "@/runnable";
 import botox from "../botox";
 
 export class DatabaseService {
