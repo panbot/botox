@@ -70,8 +70,10 @@ namespace botox {
         api: Api,
         params?: any,
     ) {
-        try {
-            api_arg.for_each_arg(api, (p, arg) => {
+        let errors: any = {};
+
+        api_arg.for_each_arg(api, (p, arg) => {
+            try {
                 let input = params?.[p];
                 if (input == null) {
                     if (arg.optional) return;
@@ -84,10 +86,20 @@ namespace botox {
                 if (error) throw error;
 
                 api[p] = value;
-            });
-        } catch (e: any) {
-            throw new ArgumentError(e.message || e);
-        }
+            } catch (e: any) {
+                errors[p] = e.message ?? e;
+            }
+        });
+
+        if (Object.keys(errors).length) throw new ArgumentError(
+            'argument validataion error',
+            {
+                cause: {
+                    code: 'ARGUMENT_VALIDATION_ERROR',
+                    errors,
+                }
+            }
+        )
 
         return run(api)
     }
@@ -105,18 +117,23 @@ namespace botox {
     }
 
     export type MODULE_OPTIONS = {
+        doc?: string,
         apis?: CONSTRUCTOR<Api>[],
         routes?: CONSTRUCTOR[],
         dependencies?: () => CONSTRUCTOR<Module>[],
     }
 
     export type API_OPTIONS = {
+        doc?: string,
+        roles: number,
     }
 
     export type API_ARG_OPTIONS<T> = {
+        doc?: string,
         validatable: validatable_factory.OPTIONS<T>,
         optional?: true,
         virtual?: true,
+        inputype?: string,
     }
 
     export type ROUTE_OPTIONS = {
@@ -174,7 +191,10 @@ function create_route() {
     const route = <
         T,
         P extends `${botox.ROUTE_OPTIONS["method"]} ${botox.ROUTE_OPTIONS["route"]}`,
-        D extends (req: botox.Req, res: botox.Res) => void,
+        D extends (
+            res: botox.Res,
+            req: botox.Req,
+        ) => void,
     >(
 
     ) => tools.create_decorator<T, P, D>(
@@ -206,7 +226,13 @@ function create_route() {
 
 function create_api() {
     const tools = decorator_tools.class_tools(decorator_tools.create_key<botox.API_OPTIONS>());
-    const api = <T extends botox.Api>() => tools.create_decorator<CONSTRUCTOR<T>>(() => ({}))
+    const api = <T extends botox.Api>(
+        roles = 0,
+    ) => tools.create_decorator<CONSTRUCTOR<T>>(
+        () => ({
+            roles,
+        })
+    )
     return Object.assign(api, {
         get_options: (api: CONSTRUCTOR<botox.Api>) => tools.get_registry(api).get_own(),
     })
@@ -224,6 +250,7 @@ function create_api_arg(
     ) => tools.create_decorator<T, P>(
         (ctx) => {
             return {
+                inputype: ctx.design_type.name.toLowerCase(),
                 validatable: get_validatable_options(ctx.design_type),
             }
         }
@@ -283,11 +310,13 @@ function create_jsonable() {
     ) => tools.create_decorator<T>(() => ({ serialize }))
 
     return Object.assign(jsonable, {
-        stringify: (o: any) => JSON.stringify(
-            o,
-            (_, v) => (
-                v?.constructor && tools.get_registry(v.constructor).get()?.serialize(v)
-            ) ?? v
-        )
+        stringify: (o: any) => o == null
+            ?   'null'
+            :   JSON.stringify(
+                    o,
+                    (_, v) => (
+                        v?.constructor && tools.get_registry(v.constructor).get()?.serialize(v)
+                    ) ?? v
+                )
     })
 }

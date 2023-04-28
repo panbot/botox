@@ -29,15 +29,13 @@ export default class {
         this.server.add_route(options.route, options.method, async (req, res) => {
             let instance = botox.container.instantiate(route);
 
-            let args: any[] = [];
-
             if (options.content_type && options.content_type != req.headers["content-type"]) {
                 res.statusCode = 415;
                 res.end();
                 return;
             }
 
-            instance[property](req, res);
+            instance[property](res, req);
         });
     }
 }

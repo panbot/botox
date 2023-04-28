@@ -10,7 +10,7 @@ export class RequestContext {
 
     constructor(
         public req_id: string,
-        public device: string,
+        public device?: string,
     ) { }
 
     req?: botox.Req;
@@ -20,18 +20,22 @@ export class RequestContext {
 
 export namespace RequestContext {
 
+    export const Roles = {
+        Anonymous: 0,
+    }
+
     export function parser(req: botox.Req) {
         let ctx = new RequestContext(
             randomUUID(),
-            require_header('x-client-id')
+            get_last_header('x-client-id')
         );
 
         ctx.req = req;
 
         let jwt_token = req.headers['authorization'];
-        if (jwt_token != null) {
+        if (jwt_token != null && jwt_token.startsWith('Bearer ')) {
             try {
-                const { uid } = get_auth_token_coder().decode(jwt_token);
+                const { uid } = get_auth_token_coder().decode(jwt_token.substring('Bearer '.length));
                 ctx.user = new RequestContext.User(uid);
             } catch (e) {
                 console.error(e);
@@ -41,9 +45,14 @@ export namespace RequestContext {
         return ctx;
 
         function require_header(key: string) {
+            let header = get_last_header(key);
+            if (!header) throw new Error(`header "${key}" required`);
+            return header;
+        }
+
+        function get_last_header(key: string) {
             let v = req.headers[key];
             let header = v instanceof Array ? v.pop() : v;
-            if (!header) throw new Error(`header "${key}" required`);
             return header;
         }
     }

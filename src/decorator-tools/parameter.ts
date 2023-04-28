@@ -1,5 +1,5 @@
 import mr from '../metadata-registry';
-import { P_OF_T, typram } from '../types';
+import { CONSTRUCTOR, P_OF_T, typram } from '../types';
 import "reflect-metadata";
 
 function parameter_decorator_tools<OPTIONS extends {}>(
@@ -23,7 +23,7 @@ function parameter_decorator_tools<OPTIONS extends {}>(
                 property   : P,
                 index      : I,
 
-                design_type: any,
+                design_type: CONSTRUCTOR<any>,
             },
         ) => OPTIONS,
     ) {

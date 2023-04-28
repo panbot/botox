@@ -1,5 +1,5 @@
 import mr from '../metadata-registry';
-import { typram } from '../types';
+import { CONSTRUCTOR, typram } from '../types';
 import "reflect-metadata";
 
 function property_decorator_tools<OPTIONS extends {}>(
@@ -18,7 +18,7 @@ function property_decorator_tools<OPTIONS extends {}>(
                 target     : T,
                 property   : P,
 
-                design_type: any,
+                design_type: CONSTRUCTOR<any>,
             },
         ) => OPTIONS,
     ) {

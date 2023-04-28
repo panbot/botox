@@ -5,10 +5,10 @@ import botox from "../botox";
 export class VirtualArgApi implements botox.Api {
 
     @botox.api_arg().optional(true)
-    arg1?: any;
+    arg1?: string;
 
     @botox.api_arg().optional(true)
-    arg2?: any;
+    arg2?: string;
 
     @botox.api_arg().virtual(true).validatable({
         parser() {

@@ -1,5 +1,5 @@
 import mr from '../metadata-registry';
-import { typram } from '../types';
+import { CONSTRUCTOR, typram } from '../types';
 import "reflect-metadata";
 
 function method_decorator_tools<OPTIONS extends {}>(
@@ -20,9 +20,9 @@ function method_decorator_tools<OPTIONS extends {}>(
                 descriptor : TypedPropertyDescriptor<D>,
 
                 design_types: {
-                    parameters : any[],
-                    return     : any
-                    type       : any,
+                    parameters : CONSTRUCTOR<any>[],
+                    return     : CONSTRUCTOR<any>
+                    type       : CONSTRUCTOR<any>,
                 },
             },
         ) => OPTIONS,

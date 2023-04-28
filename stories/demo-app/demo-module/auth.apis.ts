@@ -1,6 +1,7 @@
 import botox from "../botox";
 import { RequestContext } from "../services/request-context";
 
+@botox.api()
 export class Auth implements botox.Api {
 
     @botox.api_arg()
@@ -13,6 +14,7 @@ export class Auth implements botox.Api {
     }
 }
 
+@botox.api()
 export class WhoAmI implements botox.Api {
 
     @botox.api_arg()

@@ -2,16 +2,20 @@ import { Readable } from "stream";
 import botox from "../botox";
 import { ApiLookup } from "../services/api-lookup";
 import { RequestContext } from "../services/request-context";
+import { CONSTRUCTOR } from "@/types";
 
 export class ApiGateway {
 
     @botox.inject()
     api_lookup: ApiLookup;
 
+    @botox.inject_token('enabled_modules')
+    modules: CONSTRUCTOR<botox.Module>[];
+
     @botox.route().content_type('application/json')
     async 'POST /api/'(
-        req: botox.Req,
         res: botox.Res,
+        req: botox.Req,
     ) {
         try {
             let parts = req.url?.split('/');
@@ -36,23 +40,76 @@ export class ApiGateway {
 
             params[RequestContext.context] = req;
 
-            end(200, await botox.invoke_api(botox.container.instantiate(api), params));
+            end(res, 200, await botox.invoke_api(botox.container.instantiate(api), params));
         } catch (e: any) {
             if (e instanceof botox.ArgumentError) {
-                end(400, { message: e.message });
+                end(res, 400, { ...e.cause!, message: e.message });
             } else if (typeof e == 'string') {
-                end(400, { message: e });
+                end(res, 400, { message: e });
             } else {
                 console.error(e);
-                end(500, { message: 'unexpected error' });
+                end(res, 500, { message: 'unexpected error' });
             }
         }
+    }
 
-        function end(statusCode: number, result: any) {
-            res.statusCode = statusCode;
-            res.end(botox.jsonable.stringify(result));
+    @botox.route()
+    'GET /api-doc'(
+        res: botox.Res,
+    ) {
+        let apis: any[] = [];
+
+        this.modules.forEach(m => {
+            const options = botox.module.get_options(m);
+            if (!options) return;
+            const module_options = options;
+
+            botox.module.get_options(m)?.apis?.forEach(a => {
+                const api_options = botox.api.get_options(a);
+                if (!api_options) return;
+
+                apis.push({
+                    name: a.name,
+                    doc: api_options.doc ?? a.name,
+                    module: m.name,
+                    moduleDoc: module_options.doc ?? m.name,
+                    roles: api_options.roles,
+                    path: [ 'api', m.name, a.name ].join('/'),
+                    args: gen_args(a),
+                })
+            });
+        });
+
+        end(res, 200, {
+            apis,
+            roles: RequestContext.Roles,
+        })
+
+        function gen_args(api: CONSTRUCTOR<botox.Api>) {
+            let args: any[] = [];
+            botox.api_arg.for_each_arg(api.prototype, (name, arg_options) => {
+                if (
+                    typeof name == 'symbol' ||
+                    arg_options.virtual
+                ) return;
+
+                args.push({
+                    doc: arg_options.doc,
+                    name,
+                    necessity: arg_options.optional ? 'optional' : 'required',
+                    inputype: arg_options.inputype,
+                })
+            });
+
+            return args;
         }
     }
+}
+
+function end(res: botox.Res, statusCode: number, result: any) {
+    res.statusCode = statusCode;
+    res.setHeader('content-type', 'application/json; charset=utf-8');
+    res.end(botox.jsonable.stringify(result));
 }
 
 function drain(readable: Readable) {
