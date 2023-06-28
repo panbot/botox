@@ -22,7 +22,7 @@ function jwt(secret: string, algorithm: string) {
         let parts = jwt.split('.');
         let signature_to_test  : string;
         let signature_to_match : string;
-        let payload;
+        let payload: string;
         switch (parts.length) {
             case 3:
             payload = parts[1]!;

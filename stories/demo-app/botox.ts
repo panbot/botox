@@ -1,6 +1,6 @@
 import di from "@/dependency-injection";
 import runnable from "@/runnable";
-import { CONSTRUCTOR, P_OF_T } from "@/types";
+import { CONSTRUCTOR, FALSY, MAYBE, P_OF_T } from "@/types";
 import logging from '@/logging';
 import aop_factory from "@/aop/factory";
 import proxitive_aop_factory from "@/aop/proxitive";
@@ -8,10 +8,9 @@ import { IncomingMessage, ServerResponse } from "http";
 import metadata_registry from "@/metadata-registry";
 import decorator_tools from "@/decorator-tools";
 import property_decorator_tools from "@/decorator-tools/property";
-import validatable_factory from "@/validatable";
-import framework from '@/framework';
 import jwt_factory from './services/jwt';
 import { isPromise } from "util/types";
+import { inspect } from "node:util";
 
 namespace botox {
 
@@ -22,7 +21,7 @@ namespace botox {
 
     export const { run, run_arg } = runnable(container.get, 'run');
 
-    export const validatable = validatable_factory();
+    export const validatable = create_validatable();
     validatable["set options for built-in types"]();
     export const api_arg = create_api_arg(validatable["get_options!"]);
     export const api = create_api();
@@ -100,28 +99,15 @@ namespace botox {
             {
                 cause: {
                     code: 'ARGUMENT_VALIDATION_ERROR',
-                    errors: [ ...errors.entries() ],
+                    errors: [ ...errors.entries() ].reduce(
+                        (pv, cv) => ( pv[cv[0].toString()] = cv[1], pv ),
+                        {} as any,
+                    )
                 }
             }
         )
 
         return run(api);
-
-        async function resolve(
-            promise: Promise<any>,
-            p: keyof T,
-            validator?: validatable_factory.OPTIONS<any>["validator"],
-        ) {
-            try {
-                let value = await promise;
-                let error = await validator?.call(api, value);
-                if (error) throw error;
-
-                api[p] = await promise;
-            } catch (e: any) {
-                errors.set(p, e.message ?? e);
-            }
-        }
     }
 
     export interface Module {
@@ -150,7 +136,7 @@ namespace botox {
 
     export type API_ARG_OPTIONS<T> = {
         doc?: string,
-        validatable: validatable_factory.OPTIONS<T>,
+        validatable: botox.VALIDATABLE_OPTIONS<T>,
         optional?: true,
         virtual?: true,
         inputype?: string,
@@ -160,6 +146,12 @@ namespace botox {
         route: `/${string}`,
         method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'HEAD',
         content_type?: string,
+    }
+
+    type MAYBE_PROMISE<T> = T | Promise<T>
+    export type VALIDATABLE_OPTIONS<T> = {
+        parser: (input: unknown) => MAYBE_PROMISE<T>
+        validator?: (parsed: T) => MAYBE_PROMISE<string | FALSY>
     }
 
     export namespace logging {
@@ -259,7 +251,7 @@ function create_api() {
 }
 
 function create_api_arg(
-    get_validatable_options: (type: any) => validatable_factory.OPTIONS<any>,
+    get_validatable_options: (type: any) => botox.VALIDATABLE_OPTIONS<any>,
 ) {
     const tools = decorator_tools.property_tools(decorator_tools.create_key<botox.API_ARG_OPTIONS<unknown>>());
 
@@ -312,10 +304,33 @@ function create_module() {
         get_options: (module: CONSTRUCTOR<botox.Module>) => tools.get_registry(module).get_own(),
 
         resolve_dependencies(modules: CONSTRUCTOR<botox.Module>[]) {
-            return framework.resolve_dependencies(
-                modules,
-                m => this.get_options(m)?.dependencies?.()
-            )
+            type T = CONSTRUCTOR<botox.Module>;
+
+            let visited = new Set<T>();
+            let sorted: T[] = [];
+
+            const visit = (
+                module: T,
+                path = new Set<T>()
+            ) => {
+                if (visited.has(module)) return;
+
+                if (path.has(module)) throw new Error(`circular dependency`, { cause: {
+                    path: [ ...path, module ].map(v => inspect(v, false, 0)).join(' -> ')
+                }});
+                path.add(module);
+
+                this.get_options(module)?.dependencies?.().forEach(
+                    dep => visit(dep, new Set<T>(path))
+                );
+
+                sorted.push(module);
+                visited.add(module);
+            }
+
+            modules.forEach(m => visit(m));
+
+            return sorted;
         }
     })
 }
@@ -353,4 +368,83 @@ function create_jsonable() {
             return JSON.stringify(o)
         }
     })
+}
+
+function create_validatable() {
+    type OPTIONS<T> = botox.VALIDATABLE_OPTIONS<T>;
+    const tools = decorator_tools.class_tools(decorator_tools.create_key<OPTIONS<any>>());
+
+    let validatable = <T>(
+        parser     : OPTIONS<INSTANCE<T>>["parser"],
+        validator? : OPTIONS<INSTANCE<T>>["validator"],
+    ) => tools.create_decorator<T>(
+        (): OPTIONS<INSTANCE<T>> => ({
+            parser,
+            validator,
+        })
+    );
+
+    const set_options = <T>(
+        type: T,
+        options: OPTIONS<INSTANCE<T>>,
+    ) => tools.get_registry(type).set(options);
+
+    return Object.assign(validatable, {
+
+        get_options: <T>(type: T): MAYBE<OPTIONS<INSTANCE<T>>> => tools.get_registry(type).get(),
+
+        "get_options!": <T>(type: T): OPTIONS<INSTANCE<T>> => {
+            let options = tools.get_registry(type).get();
+            if (!options) options = { parser: () => { throw new Error('not validatable') } }
+            return options;
+        },
+
+        set_options,
+
+        assert_instance_of: <T>(v: unknown, type: CONSTRUCTOR<T>, error?: string): T => {
+            if (v instanceof type) return v;
+            throw new Error(error ?? `${type.name} required`);
+        },
+
+        "set options for built-in types": () => {
+
+            set_options(String, { parser: String });
+
+            set_options(Boolean, { parser: Boolean });
+
+            set_options(Number, {
+                parser: Number,
+                validator: parsed => isNaN(parsed)  ? 'not a number'
+                                                    : undefined,
+            });
+
+            set_options(Date, {
+                parser: input => {
+                    if (input instanceof Date) return input;
+
+                    switch (typeof input) {
+                        case 'string': case 'number': return new Date(input);
+                    }
+
+                    return new Date(`Invalid Date`);
+                },
+                validator: parsed => parsed.toString() == 'Invalid Date' && "Invalid Date",
+            });
+
+            set_options(URL, { parser: input => new URL(`${input}`) });
+        },
+    });
+
+    type INSTANCE<T>
+        = T extends StringConstructor
+        ? string
+        : T extends NumberConstructor
+        ? number
+        : T extends BooleanConstructor
+        ? boolean
+        : T extends abstract new (...args: any) => infer U
+        ? U
+        : never
+    ;
+
 }
