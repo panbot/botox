@@ -1,4 +1,4 @@
-import { CONSTRUCTOR, INSTANTIATOR, REMOVE_HEAD, REQUIRED_KEY } from "./types";
+import { CONSTRUCTOR, INSTANTIATOR, REQUIRED_KEY } from "./types";
 import mr from './metadata-registry';
 
 function runnable<M extends PropertyKey>(
@@ -107,6 +107,7 @@ type RUN_ARG_TYPE<T> = T | Promise<T>
 type PRODUCER_ARGS<
     T extends runnable.RunArgFactory
 > = REMOVE_HEAD<Parameters<T['produce_run_arg']>>;
+type REMOVE_HEAD<T> = T extends [ any, ...infer U ] ? U : never;
 
 type RUN_ARG<
     T extends runnable.RunArgFactory = runnable.RunArgFactory

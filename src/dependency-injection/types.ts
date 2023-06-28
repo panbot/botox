@@ -1,4 +1,4 @@
-import { CONSTRUCTOR, MAYBE } from "../types";
+import { CONSTRUCTOR } from "../types";
 
 namespace dependency_injection_types {
 

@@ -1,8 +1,7 @@
 import botox from "../botox";
-import { DatabaseService } from "../services/database";
 import { RequestContext } from "../services/request-context";
 
-@RequestContext.codable('p')
+@RequestContext.codable('p').csrf(true)
 class PurchaseCommand {
 
     arg1: string;
@@ -10,12 +9,6 @@ class PurchaseCommand {
     arg2: number;
 
     [RequestContext.context]: RequestContext;
-
-    run(
-        @botox.run_arg(DatabaseService.RunArgFactory, 'my_db') db: DatabaseService,
-    ) {
-
-    }
 }
 
 @botox.api()

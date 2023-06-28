@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import mr from "./metadata-registry";
-import decorator_tools from "./decorator-tools";
 import { typram } from "./types";
 
 export namespace hashcash {

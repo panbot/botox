@@ -40,21 +40,21 @@ export class ApiGateway {
 
             params[RequestContext.context] = req;
 
-            end(res, 200, await botox.invoke_api(botox.container.instantiate(api), params));
+            await end(res, 200, await botox.invoke_api(botox.container.instantiate(api), params));
         } catch (e: any) {
             if (e instanceof botox.ArgumentError) {
-                end(res, 400, { ...e.cause!, message: e.message });
+                await end(res, 400, { ...e.cause!, message: e.message });
             } else if (typeof e == 'string') {
-                end(res, 400, { message: e });
+                await end(res, 400, { message: e });
             } else {
                 console.error(e);
-                end(res, 500, { message: 'unexpected error' });
+                await end(res, 500, { message: 'unexpected error' });
             }
         }
     }
 
     @botox.route()
-    'GET /api-doc'(
+    async 'GET /api-doc'(
         res: botox.Res,
     ) {
         let apis: any[] = [];
@@ -80,7 +80,7 @@ export class ApiGateway {
             });
         });
 
-        end(res, 200, {
+        await end(res, 200, {
             apis,
             roles: RequestContext.Roles,
         })
@@ -106,10 +106,11 @@ export class ApiGateway {
     }
 }
 
-function end(res: botox.Res, statusCode: number, result: any) {
+async function end(res: botox.Res, statusCode: number, result: any) {
+    let payload = await botox.jsonable.stringify(result)
     res.statusCode = statusCode;
     res.setHeader('content-type', 'application/json; charset=utf-8');
-    res.end(botox.jsonable.stringify(result));
+    res.end(payload);
 }
 
 function drain(readable: Readable) {

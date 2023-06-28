@@ -3,19 +3,7 @@ import { CONSTRUCTOR, FALSY, MAYBE } from "./types";
 
 function validatable() {
 
-    let tools = decorator_tools.class_tools(decorator_tools.create_key<OPTIONS<any>>());
-
-    type INSTANCE<T>
-        = T extends StringConstructor
-        ? string
-        : T extends NumberConstructor
-        ? number
-        : T extends BooleanConstructor
-        ? boolean
-        : T extends abstract new (...args: any) => infer U
-        ? U
-        : never
-    ;
+    const tools = decorator_tools.class_tools(decorator_tools.create_key<OPTIONS<any>>());
 
     let validatable = <T>(
         parser     : OPTIONS<INSTANCE<T>>["parser"],
@@ -26,6 +14,11 @@ function validatable() {
             validator,
         })
     );
+
+    const set_options = <T>(
+        type: T,
+        options: OPTIONS<INSTANCE<T>>,
+    ) => tools.get_registry(type).set(options);
 
     return Object.assign(validatable, {
 
@@ -41,20 +34,18 @@ function validatable() {
 
         "set options for built-in types": () => {
 
-            set_options(String, String);
+            set_options(String, { parser: String });
 
-            set_options(Boolean, Boolean);
+            set_options(Boolean, { parser: Boolean });
 
-            set_options(
-                Number,
-                Number,
-                parsed => isNaN(parsed) ? 'not a number'
-                                        : undefined,
-            );
+            set_options(Number, {
+                parser: Number,
+                validator: parsed => isNaN(parsed)  ? 'not a number'
+                                                    : undefined,
+            });
 
-            set_options(
-                Date,
-                input => {
+            set_options(Date, {
+                parser: input => {
                     if (input instanceof Date) return input;
 
                     switch (typeof input) {
@@ -63,13 +54,10 @@ function validatable() {
 
                     return new Date(`Invalid Date`);
                 },
-                parsed => parsed.toString() == 'Invalid Date' && "Invalid Date",
-            );
+                validator: parsed => parsed.toString() == 'Invalid Date' && "Invalid Date",
+            });
 
-            set_options(
-                URL,
-                input => new URL(`${input}`),
-            );
+            set_options(URL, { parser: input => new URL(`${input}`) });
         },
 
         assert_instance_of: <T>(v: unknown, type: CONSTRUCTOR<T>, error?: string): T => {
@@ -77,22 +65,28 @@ function validatable() {
             throw new Error(error ?? `${type.name} required`);
         },
     });
-
-    function set_options<T>(
-        type: T,
-        parser: OPTIONS<INSTANCE<T>>["parser"],
-        validator?: OPTIONS<INSTANCE<T>>["validator"],
-    ) {
-        return tools.get_registry(type).set({ parser, validator })
-    }
 }
 
 namespace validatable {
     export type OPTIONS<T> = {
-        parser: (input: unknown) => T
-        validator?: (parsed: T) => string | FALSY
+        parser: (input: unknown) => MAYBE_PROMISE<T>
+        validator?: (parsed: T) => MAYBE_PROMISE<string | FALSY>
     }
 }
+
+type MAYBE_PROMISE<T> = T | Promise<T>
+
+type INSTANCE<T>
+    = T extends StringConstructor
+    ? string
+    : T extends NumberConstructor
+    ? number
+    : T extends BooleanConstructor
+    ? boolean
+    : T extends abstract new (...args: any) => infer U
+    ? U
+    : never
+;
 
 import OPTIONS = validatable.OPTIONS;
 

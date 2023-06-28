@@ -17,10 +17,6 @@ export type IS<X, Y> = (
     <T>() => T extends Y ? true : false
 ) ? true : false;
 
-export type GET_HEAD<T> = T extends any[] ? T[0] : never;
-export type REMOVE_HEAD<T> = T extends [ any, ...infer U ] ? U : never;
-export type REMOVE_TAIL<T> = T extends [ ...infer U, any ] ? U : never;
-
 export function typram<T>() { return new typram.Typram<T>() }
 export namespace typram {
 

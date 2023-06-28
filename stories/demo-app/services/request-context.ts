@@ -2,6 +2,7 @@ import botox from "../botox";
 import { randomUUID } from "crypto";
 import { CONSTRUCTOR } from "@/types";
 import decorator_tools from "@/decorator-tools";
+import { CSRF_SERVICE, csrf_service_token } from "./csrf";
 
 @botox.validatable(v => RequestContext.parser(
     botox.validatable.assert_instance_of(v, botox.Req)
@@ -10,7 +11,7 @@ export class RequestContext {
 
     constructor(
         public req_id: string,
-        public device?: string,
+        public device: string,
     ) { }
 
     req?: botox.Req;
@@ -27,7 +28,7 @@ export namespace RequestContext {
     export function parser(req: botox.Req) {
         let ctx = new RequestContext(
             randomUUID(),
-            get_last_header('x-client-id')
+            get_last_header('x-client-id') ?? 'test'
         );
 
         ctx.req = req;
@@ -71,50 +72,81 @@ export namespace RequestContext {
     }
 
     export function get_request_context(o: any): RequestContext | undefined {
-        let ctx = o?.[context];
+        const ctx = o?.[context];
         if (ctx instanceof RequestContext) return ctx;
+    }
+
+    export function require_request_context(o: any): RequestContext {
+        const ctx = get_request_context(o);
+        if (!ctx) throw new Error(`ctx required`);
+        return ctx;
     }
 
     export const codable = create_codable();
 
+    type CODABLE_OPTIONS = {
+        id: string
+        csrf?: boolean
+    }
+
     function create_codable() {
-        let tools = decorator_tools.class_tools(decorator_tools.create_key<{ id: string }>());
+        let tools = decorator_tools.class_tools(decorator_tools.create_key<CODABLE_OPTIONS>());
 
         return <T extends HAS_REQUEST_CONTEXT>(
-            id: string
+            id: string,
         ) => assert_unique(id) && tools.create_decorator<CONSTRUCTOR<T>>(
-            ctx => {
-                botox.validatable.set_options(
-                    ctx.target,
-                    function (this: any, v: unknown) {
-                        const ctx = get_request_context(this);
-                        if (!ctx) throw new Error(`ctx required`);
+            ({ target }) => {
+                botox.validatable.set_options(target, {
+                    parser: async function (this: any, v: unknown) {
+                        const ctx = require_request_context(this);
+                        let entropy = create_entropy(id, ctx);
 
-                        const coder = botox.container.get(botox.tokens.jwt_factory)([
-                            id,
-                            ctx.device,
-                            ctx.user?.uid ?? '',
-                        ].join(''));
+                        let options = tools.get_registry(target).get()!;
+                        let csrf_service: CSRF_SERVICE | undefined;
+                        if (options.csrf) {
+                            csrf_service = botox.container.get(csrf_service_token);
+                            entropy.push(await csrf_service.get_csrf_token(ctx.device));
+                        }
 
-                        return coder.decode(String(v))
+                        let decoded = get_coder(entropy).decode(String(v));
+
+                        csrf_service?.clear_csrf_token(ctx.device);
+
+                        return decoded;
+                    },
+
+                });
+
+                botox.jsonable(async (o: HAS_REQUEST_CONTEXT) => {
+                    const ctx = o[context];
+                    let entropy = create_entropy(id, ctx);
+
+                    let options = tools.get_registry(target).get()!;
+                    if (options.csrf) {
+                        entropy.push(await botox.container.get(csrf_service_token).create_csrf_token(ctx.device));
                     }
-                );
 
-                botox.jsonable((o: HAS_REQUEST_CONTEXT) => {
-                    const ctx = o[RequestContext.context];
-
-                    const coder = botox.container.get(botox.tokens.jwt_factory)([
-                        id,
-                        ctx.device,
-                        ctx.user?.uid ?? '',
-                    ].join(''));
-
-                    return coder.encode(o)
-                })(ctx.target);
+                    return get_coder(entropy).encode(o);
+                })(target);
 
                 return { id }
             }
-        )
+        ).as_setter();
+
+        function create_entropy(
+            id: string,
+            ctx: RequestContext,
+        ): string[] {
+            return [
+                id,
+                ctx.device ?? '',
+                ctx.user?.uid ?? '',
+            ];
+        }
+
+        function get_coder(entropy: string[]) {
+            return botox.container.get(botox.tokens.jwt_factory)(entropy.join(''))
+        }
     }
 
     const codable_id_set = new Set<string>();
@@ -126,5 +158,5 @@ export namespace RequestContext {
 }
 
 function get_auth_token_coder() {
-    return botox.container.get(botox.tokens.jwt_factory)(('auth token'));
+    return botox.container.get(botox.tokens.jwt_factory)('auth token');
 }

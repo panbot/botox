@@ -11,6 +11,7 @@ import property_decorator_tools from "@/decorator-tools/property";
 import validatable_factory from "@/validatable";
 import framework from '@/framework';
 import jwt_factory from './services/jwt';
+import { isPromise } from "util/types";
 
 namespace botox {
 
@@ -66,13 +67,16 @@ namespace botox {
         get => get(tokens[token] as any)
     );
 
-    export function invoke_api(
-        api: Api,
+    export async function invoke_api<T extends Api>(
+        api: T,
         params?: any,
     ) {
-        let errors: any = {};
+        let errors = new Map<keyof T, string>();
+        let args = new Map<keyof T, botox.API_ARG_OPTIONS<any>>();
 
-        api_arg.for_each_arg(api, (p, arg) => {
+        api_arg.for_each_arg(api, async (p, arg) => args.set(p, arg));
+
+        for (let [ p, arg ] of args.entries()) {
             try {
                 let input = params?.[p];
                 if (input == null) {
@@ -81,27 +85,43 @@ namespace botox {
                 }
 
                 const { parser, validator } = arg.validatable;
-                let value = parser.call(api, input);
-                let error = validator?.call(api, value);
+                let value = await parser.call(api, input);
+                let error = await validator?.call(api, value);
                 if (error) throw error;
 
                 api[p] = value;
             } catch (e: any) {
-                errors[p] = e.message ?? e;
+                errors.set(p, e.message ?? e);
             }
-        });
+        }
 
-        if (Object.keys(errors).length) throw new ArgumentError(
+        if (errors.size) throw new ArgumentError(
             'argument validataion error',
             {
                 cause: {
                     code: 'ARGUMENT_VALIDATION_ERROR',
-                    errors,
+                    errors: [ ...errors.entries() ],
                 }
             }
         )
 
-        return run(api)
+        return run(api);
+
+        async function resolve(
+            promise: Promise<any>,
+            p: keyof T,
+            validator?: validatable_factory.OPTIONS<any>["validator"],
+        ) {
+            try {
+                let value = await promise;
+                let error = await validator?.call(api, value);
+                if (error) throw error;
+
+                api[p] = await promise;
+            } catch (e: any) {
+                errors.set(p, e.message ?? e);
+            }
+        }
     }
 
     export interface Module {
@@ -268,7 +288,7 @@ function create_api_arg(
     }
 
     return Object.assign(api_arg, {
-        for_each_arg: <
+        for_each_arg: async <
             T extends botox.Api,
             P extends keyof T,
         >(
@@ -276,7 +296,7 @@ function create_api_arg(
             callback: (p: P, options: botox.API_ARG_OPTIONS<any>) => void,
         ) => tools.get_registry[metadata_registry.get_properties](api).for_each(
             (p, gr) => callback(p, gr().get()!)
-        )
+        ),
     })
 }
 
@@ -302,21 +322,35 @@ function create_module() {
 
 function create_jsonable() {
     const tools = decorator_tools.class_tools(
-        decorator_tools.create_key<{ serialize: (o: any) => string }>(),
+        decorator_tools.create_key<{ serialize: (o: any) => string | Promise<string> }>(),
     );
 
     const jsonable = <T>(
-        serialize: (o: any) => string
+        serialize: (o: any) => string | Promise<string>
     ) => tools.create_decorator<T>(() => ({ serialize }))
 
     return Object.assign(jsonable, {
-        stringify: (o: any) => o == null
-            ?   'null'
-            :   JSON.stringify(
-                    o,
-                    (_, v) => (
-                        v?.constructor && tools.get_registry(v.constructor).get()?.serialize(v)
-                    ) ?? v
-                )
+        stringify: async (o: any) => {
+            if (o == null) return 'null';
+
+            let promises: Promise<any>[] = [];
+
+            let string = JSON.stringify(
+                o,
+                function (k, v) {
+                    let p = ( v?.constructor && tools.get_registry(v.constructor).get()?.serialize(v) ) ?? v;
+                    if (!isPromise(p)) return p;
+
+                    promises.push(p.then(v => this[k] = v));
+                    return undefined;
+                }
+            );
+
+            if (!promises.length) return string;
+
+            await Promise.all(promises);
+
+            return JSON.stringify(o)
+        }
     })
 }
