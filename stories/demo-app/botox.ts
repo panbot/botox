@@ -165,6 +165,32 @@ namespace botox {
     }
 
     export const jwt = jwt_factory('change this', 'sha256');
+
+    export function create_run_arg_factory_api_arg() {
+        const tools = decorator_tools.property_tools(
+            decorator_tools.create_key<{}>(),
+        );
+
+        let decorator = <
+            T extends botox.Api,
+            P,
+        >() => tools.create_decorator<T, P>(() => ({}));
+
+        return Object.assign(decorator, {
+            get_value: (runnable: any) => {
+                let property: any;
+                tools.get_registry[metadata_registry.get_properties](runnable).for_each(
+                    p => {
+                        if (property != null) throw new Error(`already defined`);
+                        property = p;
+                    }
+                );
+                if (property == null) throw new Error(`not defined`);
+
+                return runnable[property];
+            }
+        })
+    }
 }
 
 export default botox;

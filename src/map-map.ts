@@ -36,7 +36,14 @@ export class MapMap<KEYS extends any[], VALUE> {
     }
 
     has(...keys: PARTIAL_KEY<KEYS>) {
+        let map = this.map;
+        while (keys.length) {
+            let key = keys.shift();
+            if (!map.has(key)) return false;
+            map = map.get(key);
+        }
 
+        return true;
     }
 }
 
